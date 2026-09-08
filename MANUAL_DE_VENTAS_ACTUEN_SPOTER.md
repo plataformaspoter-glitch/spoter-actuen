@@ -32,12 +32,12 @@ El vocabulario define el valor percibido. Prohibido utilizar lenguaje de "commod
 La mayoría de los dueños de negocios, gerentes comerciales y directores de marketing cometen el mismo error crítico:
 > *"Invierten millones en Meta Ads, Google Ads o campañas de influencers para inundar su WhatsApp de leads, pero tienen una tasa de conversión deplorable porque su canal de atención está roto por dentro."*
 
-### 2.1. Los 4 Dolores Fatales que el 90% de las Empresas Padece en WhatsApp:
+### Los 4 Dolores Fatales que el 90% de las Empresas Padece en WhatsApp:
 
 1. **La "Zona Fría" (> 15 minutos de espera):**
    * El 78% de los leads que consultan por WhatsApp compran al primer competidor que les responde de forma clara. Si un asesor tarda 20, 30 o 45 minutos en atender, el dinero invertido en pauta publicitaria se arrojó a la basura.
 2. **Fragmentación Desordenada (Cero Vueltas violado):**
-   * El operador envía 4 a 6 mensajes separados: *"Hola"*, *"¿Cómo estás?"*, *"¿De qué zona sos?"*, *"Te paso precio"*, *"Pero no incluye flete"*. Esto satura al cliente, genera fricción y triplica la carga del asesor.
+   * El operador envía 4 a 6 mensajes separados: *"Hola"*, *"¿Cómo estás?"*, *"¿De qué zona sos?"*, *"Te paso precio"*, *"Pero no incluye flete"*. Esto satura al cliente, genera fricción cognitiva y triplica la carga del asesor.
 3. **El Ping-Pong Especulativo (8 a 16 mensajes por venta):**
    * Se necesitan 10 idas y vueltas para concretar un dato que podría resolverse en 2 turnos con la Regla del Bloque Único.
 4. **El Cuello de Botella FIFO (Atención por Orden de Llegada):**
@@ -45,29 +45,38 @@ La mayoría de los dueños de negocios, gerentes comerciales y directores de mar
 
 ---
 
-### 2.2. La Matemática del LTV: El Verdadero Costo de la No-Atención
+## 💰 3. LA MATEMÁTICA DEL LTV: EL VERDADERO COSTO DE LA NO-ATENCIÓN
 
 El error contable más común de los empresarios es pensar: *"Bueno, el cliente no esperó y no compró hoy; perdimos una venta de $50 USD"*. 
-**Ese cálculo es falso.** En cualquier empresa seria, el valor de un cliente no es su primera transacción: es su **Lifetime Value (LTV)**:
+**Ese cálculo es falso.** En cualquier empresa seria, el valor de un cliente no es su primera transacción: es su **Lifetime Value (LTV)** acumulado a lo largo del tiempo.
+
+### 3.1. Fórmulas Matemáticas Formales del Impacto Patrimonial:
 
 $$\text{LTV} = \text{Ticket Promedio} \times \text{Frecuencia de Compra Anual} \times \text{Años de Retención}$$
 
-$$\text{Capital Real Destruido} = \text{Leads Desatendidos} \times \text{Tasa de Conversión Potencial} \times \text{LTV} + \text{CAC Desperdiciado en Pauta}$$
+$$\text{Capital Real Destruido} = \text{Leads Desatendidos} \times \text{Tasa de Conversión Potencial (65\%)} \times \text{LTV} + \text{CAC Desperdiciado en Pauta}$$
 
-#### Tabla de Referencia del Impacto en LTV por Industria:
-* **Construcción y Corralones:** Ticket inicial $850 USD, 4 compras al año, 2 años de obra $\rightarrow$ **LTV: $6,800 USD**. Cada lead que no responde en 15 min no cuesta $850, ¡cuesta casi $7,000 USD!
-* **Salud y Obras Sociales:** Cuota $70 USD/mes, 12 meses, 3.5 años de permanencia $\rightarrow$ **LTV: $2,940 USD**.
-* **Automotor y Concesionarias:** Vehículo + Services Oficiales + Recompra $\rightarrow$ **LTV: $36,000 USD**.
-* **Inmobiliarias y Desarrollos:** Comisión inicial + Alquileres / Reventas $\rightarrow$ **LTV: $45,000 USD**.
-* **Comercio y Retail / E-commerce:** Ticket $50 USD, 4.5 compras al año, 2 años $\rightarrow$ **LTV: $450 USD**.
-* **SaaS y Servicios B2B:** Abono $280 USD/mes, 3 años $\rightarrow$ **LTV: $10,080 USD**.
+### 3.2. Tabla de Referencia del Impacto en LTV por Industria:
+
+| Sector / Rubro | Ticket Inicial Promedio | Frecuencia Anual | Años Retención | LTV Unitario Estimado | Impacto por Cada 10 Leads Perdidos |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Construcción y Corralones** | $850 USD | 4.0 compras/año | 2.0 años | **$6,800 USD** | **$44,200 USD** destruidos |
+| **Concesionarias y Talleres** | $12,000 USD | Compra + Services | 3.0 años | **$36,000 USD** | **$234,000 USD** destruidos |
+| **Inmobiliarias y Desarrollos** | $3,500 USD | Compra / Alquiler | 3.5 años | **$45,000 USD** | **$292,500 USD** destruidos |
+| **Salud, Obras Sociales y Prepagas** | $70 USD / mes | 12 meses | 3.5 años | **$2,940 USD** | **$19,110 USD** destruidos |
+| **Seguros y Finanzas / Fintech** | $50 USD / mes | 12 meses | 4.0 años | **$2,400 USD** | **$15,600 USD** destruidos |
+| **Comercio y Retail / E-commerce** | $50 USD | 4.5 compras/año | 2.0 años | **$450 USD** | **$2,925 USD** destruidos |
+| **Software, SaaS y Servicios B2B** | $280 USD / mes | 12 meses | 3.0 años | **$10,080 USD** | **$65,520 USD** destruidos |
+
+### 3.3. La Destrucción del CAC en Pauta Publicitaria (Meta Ads / Google Ads):
+Cuando un lead ingresa por un anuncio pagado, la empresa ya pagó su Costo de Adquisición (CAC) a Meta o Google. Si el lead cae en la "Zona Fría" (> 15 min), el dinero invertido se pierde sin retorno. Además, Meta detecta una baja tasa de conversión por evento y penaliza la cuenta encareciendo el CPM (Costo por Mil Impresiones).
 
 > **Argumento Clave de Venta:**  
 > *"Cuando tu vendedor tarda 40 minutos en contestar en WhatsApp, no estás dejando sobre la mesa un ticket suelto: estás regalándole a tu competidor un cliente que durante los próximos dos años le va a dejar miles de dólares, mientras vos pagaste la factura publicitaria de Meta para conseguirlo."*
 
 ---
 
-## 🎯 3. LA OFERTA GRAND SLAM: LA AUDITORÍA DIAGNÓSTICA ACTÚEN+
+## 🎯 4. LA OFERTA GRAND SLAM: LA AUDITORÍA DIAGNÓSTICA ACTÚEN+
 
 Para derribar la resistencia inicial, Spoter no empieza intentando vender una suscripción o un desarrollo costoso. Vendemos un **Diagnóstico de Fuga, LTV y Capacidad Operativa con el Analizador ACTÚEN+**.
 
@@ -80,7 +89,7 @@ Para derribar la resistencia inicial, Spoter no empieza intentando vender una su
 
 ---
 
-## 🔬 4. EL MÉTODO ACTÚEN+ COMO ARGUMENTARIO COMERCIAL
+## 🔬 5. LOS 7 PILARES DEL MÉTODO ACTÚEN+ COMO ARGUMENTARIO COMERCIAL
 
 ```
            [ MÉTODO ACTÚEN+ DE SPOTER ]
@@ -95,17 +104,17 @@ Para derribar la resistencia inicial, Spoter no empieza intentando vender una su
  └──────────────────────────────────────────────────┘
 ```
 
-* **A - Atraer y Atender:** Filtro inteligente sin fricción. Elimina laberintos de opciones y conecta en el acto.
-* **C - Cero Vueltas:** Regla del Bloque Único. Envía cotización, detalles, flete y acción en 1 solo mensaje.
-* **T - Tiempos Aceitados:** Blindaje anti Zona Fría. El primer contacto se responde en < 2 minutos.
-* **U - Ubicar la Intención:** Mide la temperatura real de compra con el **Índice de Conversión (IC)**.
-* **E - Experiencia Personalizada:** Implementa el **Protocolo de Rescate Spoter Lite**, reactivando presupuestos fríos antes del abandono.
-* **N - Nutrir y Cerrar:** Tipping Point obligatorio. Cada mensaje finaliza con una pregunta de avance y compromiso.
-* **+ - Optimización Continua:** Equilibrio de carga Bot-Humano y protección del LTV de la cartera.
+* **A - Atraer y Atender:** Filtro inteligente sin fricción. Elimina laberintos de opciones donde el 40% de los usuarios abandona. Conecta en el acto.
+* **C - Cero Vueltas:** Regla del Bloque Único. Envía cotización, detalles, flete y acción en 1 solo mensaje estructurado, eliminando ráfagas.
+* **T - Tiempos Aceitados:** Blindaje anti Zona Fría. El primer contacto se responde en < 2 minutos inyectando oxígeno conversacional.
+* **U - Ubicar la Intención:** Mide la temperatura real de compra con el **Índice de Conversión (IC)**, capturando necesidades completas en el mismo turno.
+* **E - Experiencia Personalizada:** Implementa el **Protocolo de Rescate Spoter Lite**, reactivando presupuestos fríos con preguntas contextuales.
+* **N - Nutrir y Cerrar:** Tipping Point obligatorio. Cada mensaje finaliza con una pregunta de avance y compromiso comercial.
+* **+ - Optimización Continua:** Equilibrio de carga Bot-Humano (Handoff), descompresión de cuellos de botella y protección del LTV de la cartera.
 
 ---
 
-## 🧠 5. EL MOTOR DETERMINÍSTICO Y TRIAGE QUIRÚRGICO: ALGORITMOS IU / IC Y COPILOTO HITL
+## 🧠 6. TRIAGE QUIRÚRGICO: ALGORITMOS IU / IC Y MOTOR DETERMINÍSTICO SPOTER LITE (HITL)
 
 Uno de los mayores temores de los directivos es: *"No quiero que una Inteligencia Artificial alucine o conteste cualquier cosa a mis clientes VIP"*. Spoter resuelve esto con una arquitectura matemática revolucionaria: **HITL (Human-in-the-Loop) gobernado por reglas determinísticas.**
 
@@ -120,34 +129,38 @@ Uno de los mayores temores de los directivos es: *"No quiero que una Inteligenci
 
 > **Principio Rector:** *"La IA interpreta el lenguaje. El IC cuantifica la intención. El IU ordena la cola. El Motor Lite decide la estrategia. El operador humano ejecuta asistido."*
 
-### 5.1. El Índice de Conversión (IC, 0–100): ¿Qué tan cerca de comprar está el cliente?
-No es una opinión ni un puntaje inventado por ChatGPT. Se calcula matemáticamente con 5 variables objetivas:
+### 6.1. El Fin del Cuello de Botella FIFO (Atención por Orden de Llegada):
+Atender por estricto orden de llegada ("First In, First Out") premia al curioso que solo saluda y penaliza al comprador con tarjeta en mano. Con Spoter, los compradores calientes saltan al puesto #1 de la cola con su respuesta lista para enviar.
+
+### 6.2. El Índice de Conversión (IC, 0–100): ¿Qué tan cerca de comprar está el cliente?
+No es una opinión ni un puntaje inventado. Se calcula matemáticamente con 5 variables objetivas:
 * **E (Etapa del Embudo, 0–25):** Si el cliente ya recibió propuesta, está en negociación o en cierre inminente.
 * **I (Intención Observable, 0–30):** Hechos, no palabras. Clicks en catálogo, consultas de cuotas, pedidos de alias/CBU o confirmaciones.
 * **G (Engagement y Ritmo, 0–20):** Si responde en minutos, si escribe mensajes con sustancia y hace preguntas propias.
-* **H (Habilitantes, 0–15):** Datos indispensables entregados (DNI, dirección de entrega, modelo, póliza).
+* **H (Habilitantes, 0–15):** Datos indispensables entregados (DNI, dirección de entrega/obra, modelo, póliza).
 * **R (Reconexión, 0–10):** Si el cliente volvió por su cuenta tras un período de silencio.
 * **Calibración Semántica MASS ([-15, +15]):** La IA analiza sutilezas (objeción blanda vs señal de compra explícita como *"dónde firmo"*).
 
-### 5.2. El Índice de Urgencia (IU, 0–100): ¿A quién atiende el operador en este segundo?
-Acaba con la nefasta atención por orden de llegada (FIFO). El IU ordena la bandeja de entrada ponderando:
+### 6.3. El Índice de Urgencia (IU, 0–100): ¿A quién atiende el operador en este segundo?
+El IU ordena la bandeja de entrada ponderando:
 * **Módulo A (Contexto y Origen):** Cliente VIP, recurrente y si proviene de **campañas de pauta publicitaria paga**.
 * **Módulo B (SLA y Espera):** Tiempo transcurrido contra el SLA del rubro (curva asintótica que no satura).
 * **Módulo C (Compromisos Horarios):** Si se prometió contactarlo a una hora determinada.
 * **Módulo D (Intención Importada del IC):** Los clientes calientes suben inmediatamente a la cima de la cola.
-* **Regla de No-Inanición:** Ningún cliente queda postergado indefinidamente por no ser VIP; si supera el límite de espera, escala de forma prioritaria.
+* **Regla de No-Inanición (Anti-Starvation):** Ningún cliente queda postergado indefinidamente por no ser VIP; si supera el límite de espera, escala de forma prioritaria.
 
-### 5.3. Spoter Lite: El Motor Determinístico de Planes con IA
-Lite no genera mensajes automáticos sin sentido ni insiste eternamente:
-1. **Fase de Gracia (< 30% de la sesión):** No descarta leads al inicio. Que un lead no conteste el primer día no significa que sea malo; significa que aún no lo trabajamos.
-2. **Fase de Trabajo (30% a 60%):** Alerta al operador de caídas de intención y sugiere contenidos de valor (prueba social, promos).
-3. **Fase de Cierre y Ventana de Rescate (60% a 100%):** Si la oportunidad decae, Spoter no la abandona: ejecuta un **Último Rescate** (una pregunta directa y concisa de decisión) o un `STOP` inteligente para no quemar el número.
-4. **Protección de la Ventana de 24 hs de WhatsApp (Meta Business API):**
-   * Pasadas 24 horas del último mensaje del cliente, Meta prohíbe el texto libre. Spoter verifica la existencia de **Plantillas Aprobadas**; si no existe plantilla, deriva inmediatamente a `HANDOFF_HUMANO` para que el caso no muera en silencio.
+### 6.4. Spoter Lite: El Motor Determinístico de Fases y Planes con IA
+Lite no genera mensajes automáticos descontrolados ni insiste eternamente:
+1. **Fase de Gracia (< 30% de la sesión):** No descarta leads al inicio. Que un lead no conteste el primer mensaje no significa que sea malo; significa que aún no lo trabajamos.
+2. **Fase de Trabajo (30% a 60%):** Alerta al operador de caídas de intención y sugiere contenidos de valor (prueba social, promos, stock).
+3. **Fase de Cierre y Ventana de Rescate (60% a 100%):** Si la oportunidad decae, Spoter no la abandona: ejecuta un **Último Rescate** (pregunta concisa de decisión: *"¿Te reservo los materiales para mañana?"*) o un `STOP` inteligente para no quemar el contacto.
+
+### 6.5. Protección de la Ventana de 24 hs de WhatsApp (Meta API):
+Pasadas 24 horas del último mensaje del cliente, Meta prohíbe el texto libre y exige plantillas HSM pagas. Spoter emite una **alerta preventiva a las 20 horas**; si no existe plantilla aprobada, deriva inmediatamente a `HANDOFF_HUMANO` para que el lead no quede incomunicado.
 
 ---
 
-## 🎙️ 6. GUION DE PREGUNTAS SPIN (ENFOCADO EN LTV Y CUELLE DE BOTELLA FIFO)
+## 🎙️ 7. GUION DE PREGUNTAS SPIN (ENFOCADO EN LTV Y CUELLO DE BOTELLA FIFO)
 
 ### S - Situation (Situación)
 * *"¿Cuántos leads nuevos reciben por día en su línea de WhatsApp comercial?"*
@@ -171,22 +184,23 @@ Lite no genera mensajes automáticos sin sentido ni insiste eternamente:
 
 ---
 
-## 💻 7. CÓMO HACER UNA DEMO DEMOLEDORA CON EL ANALIZADOR ACTÚEN+
+## 💻 8. CÓMO CONDUCIR UNA DEMO DEMOLEDORA CON EL ANALIZADOR ACTÚEN+
 
 1. **Carga en Vivo (`http://localhost:8080`):** Mostrá la pantalla inicial limpia y seleccioná el lote de chats.
-2. **Wizard de Calibración:** Destacá cómo el sistema detecta el Rubro, la Política de Handoff y los parámetros de SLA.
-3. **El Panel de LTV y Capital en Riesgo:**  
-   * Señalá la tarjeta: **Capital LTV en Riesgo ($)**. Mostrale: *"Tu empresa perdió X leads calientes en Zona Fría. Esto representa $X USD de facturación destruida en LTV futuro."*
+2. **Wizard de Calibración:** Destacá cómo el sistema detecta el Rubro, la Política de Handoff y los parámetros de SLA del sector.
+3. **El Panel de LTV y Capital en Riesgo (Pestaña 2):**  
+   * Hacé clic en la tarjeta: **Capital LTV en Riesgo ($)** para abrir el modal interactivo con el cálculo detallado.
+   * Mostrale: *"Tu empresa perdió X leads calientes en Zona Fría. Esto representa $X USD de facturación destruida en LTV futuro."*
 4. **La Comparativa FIFO vs Spoter:**  
-   * Mostrá cómo bajo atención FIFO los leads calientes tardan 38 minutos, mientras que con Spoter la cola inteligente los atiende en menos de 2 minutos.
-5. **El Semáforo ACTÚEN+ Interactivo:**  
-   * Abrí la tarjeta **E - Experiencia** y mostrá los **Leads Rescatables Lite**: prospectos con intención activa que quedaron abandonados y que un Plan de Rescate habría recuperado.
-6. **Simulador de ROI en Vivo:**  
-   * Ajustá con el cliente los sliders de *Ticket Promedio*, *Compras al Año* y *Años de Retención*, y mostrale en pantalla el dinero exacto que Spoter le ahorra y genera.
+   * Mostrá cómo bajo atención FIFO los leads calientes tardan horas (ej: 154 minutos), mientras que con Spoter la cola inteligente los atiende en menos de 2 minutos (-90%).
+5. **Simulador de LTV y Recuperación con Selector de Moneda:**  
+   * Alterná entre **`[ 💵 USD ]`** y **`[ 🇦🇷 ARS ]`** y ajustá con el cliente los sliders de *Ticket Promedio*, *Frecuencia Anual* y *Retención* para que vea el capital protegido en vivo.
+6. **El Semáforo ACTÚEN+ y Ping-Pong Calibrado por Rubro:**  
+   * Mostrá el estándar adaptado a su industria (ej. 6.5 msgs) y las **Respuestas Maestras** en 1 solo bloque estructurado.
 
 ---
 
-## 🛡️ 8. DESARME DE OBJECIONES DE ALTO NIVEL
+## 🛡️ 9. DESARME DE OBJECIONES DE ALTO NIVEL
 
 ### Objeción 1: *"Ya tengo 3 vendedores atendiendo WhatsApp, no se me pasa nada."*
 * **Fundamento:** Atienden por orden de llegada (FIFO). La saturación hace que atiendan lo primero que entra, no lo que más convierte.
@@ -203,9 +217,14 @@ Lite no genera mensajes automáticos sin sentido ni insiste eternamente:
 * **Guion de Respuesta:**  
   > *"Incluso en productos de compra única (como una casa o un auto), el cliente hace services, compra repuestos, o más importante aún: te recomienda con su círculo cercano. Si un cliente tuvo una experiencia frustrante en WhatsApp esperando 40 minutos, no solo no te recomienda, sino que habla mal de tu servicio. El LTV no es solo la recompra directa; es la red de valor que ese cliente atrae."*
 
+### Objeción 4: *"Ahora no es prioridad, lo vemos el mes que viene."*
+* **Fundamento:** Cada día que pasa sin Spoter se sigue destruyendo capital publicitario.
+* **Guion de Respuesta:**  
+  > *"Entiendo perfectamente que tengas prioridades. La pregunta es: si tu Analizador muestra que hoy estás perdiendo 12 leads calientes por semana por demoras en Zona Fría, esperar un mes significa regalarle otros 50 clientes y miles de dólares a tu competencia. En 5 minutos corremos el diagnóstico gratuito y tomás la decisión con tus números en la mano."*
+
 ---
 
-## 📲 9. SCRIPTS DE PROSPECCIÓN Y SEGUIMIENTO (WHATSAPP & LINKEDIN)
+## 📲 10. SCRIPTS DE PROSPECCIÓN Y SEGUIMIENTO (WHATSAPP & LINKEDIN)
 
 ### Script 1: Prospección a Dueño / Director Comercial (Enfoque LTV & Pauta)
 > *"Hola [Nombre], ¿cómo estás? Te escribo porque veo que están invirtiendo fuerte en pauta publicitaria en Meta para [Nombre de Empresa].*  
@@ -217,11 +236,15 @@ Lite no genera mensajes automáticos sin sentido ni insiste eternamente:
 > *"[Nombre], terminamos de procesar el lote de conversaciones que nos pasaste. Detectamos que el 28% de tus consultas cayeron en Zona Fría y tenés más de 40 leads calientes que se enfriaron por cuello de botella de atención. Calculamos un capital en LTV en riesgo de más de $15,000 USD.*  
 > *¿Te parece que nos conectemos 15 minutos hoy a las 16:00 hs para mostrarte el informe y la solución?"*
 
+### Script 3: Reactivación de Prospecto Indeciso
+> *"[Nombre], te comparto un dato puntual: esta semana una empresa de tu mismo rubro implementó la Cola Priorizada y redujo el tiempo de espera de sus compradores de 42 min a 1.8 minutos, aumentando un 22% su tasa de cierre.*  
+> *¿Querés que veamos cómo aplicaría en tu equipo antes de fin de mes?"*
+
 ---
 
-## ✅ 10. CHECKLIST PRE-LLAMADA DE VENTA
-- [ ] Tener abierto el Analizador ACTÚEN+ en `http://localhost:8080`.
+## ✅ 11. CHECKLIST PRE-LLAMADA DE VENTA
+- [ ] Tener abierto el Analizador ACTÚEN+ en `http://localhost:8080` (o la versión online).
 - [ ] Tener identificado el Rubro del prospecto y su ticket promedio estimado.
-- [ ] Conocer si invierten en pauta publicitaria en Meta Ads o Google.
-- [ ] Tener a mano la tabla de LTV del sector para calcular el impacto económico en vivo.
+- [ ] Conocer si invierten en pauta publicitaria en Meta Ads o Google Ads.
+- [ ] Tener a mano la tabla de LTV del sector (Punto 3) para calcular el impacto económico en vivo.
 - [ ] Recordar la regla de oro: *"El médico no ruega; muestra la radiografía y receta el tratamiento."*

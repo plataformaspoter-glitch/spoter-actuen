@@ -22,6 +22,88 @@
         for (const name of names) caches.delete(name);
       });
     }
+
+    // LTV Calculator Interactive Logic
+    let manualCurrency = 'USD';
+    const FX_RATE_MANUAL = 1250;
+
+    const inTicket = document.getElementById('manInputTicket');
+    const inFreq = document.getElementById('manInputFreq');
+    const inYears = document.getElementById('manInputYears');
+    const inLeads = document.getElementById('manInputLeads');
+    const inCac = document.getElementById('manInputCac');
+
+    const lblManTicket = document.getElementById('lblManTicket');
+    const lblManCac = document.getElementById('lblManCac');
+
+    const outLtvUnit = document.getElementById('manResLtvUnit');
+    const outCapitalDestroyed = document.getElementById('manResCapitalDestroyed');
+    const outCacLost = document.getElementById('manResCacLost');
+    const outRecovered = document.getElementById('manResRecovered');
+
+    const btnManUsd = document.getElementById('btnManualUsd');
+    const btnManArs = document.getElementById('btnManualArs');
+
+    function formatManualMoney(amount) {
+      if (manualCurrency === 'ARS') {
+        return '$' + Math.round(amount).toLocaleString('es-AR') + ' ARS';
+      }
+      return '$' + Math.round(amount).toLocaleString('en-US') + ' USD';
+    }
+
+    function calculateManualLtv() {
+      if (!inTicket || !inFreq || !inYears || !inLeads || !inCac) return;
+      const ticket = parseFloat(inTicket.value) || 0;
+      const freq = parseFloat(inFreq.value) || 0;
+      const years = parseFloat(inYears.value) || 0;
+      const leads = parseFloat(inLeads.value) || 0;
+      const cac = parseFloat(inCac.value) || 0;
+
+      const ltvUnit = ticket * freq * years;
+      const lostImmediate = leads * ticket * 0.65;
+      const lostLtvTotal = leads * ltvUnit * 0.65;
+      const lostCacTotal = leads * cac;
+      const totalDestroyed = lostLtvTotal + lostCacTotal;
+      const potentialRecovered = totalDestroyed * 0.75;
+
+      outLtvUnit.textContent = formatManualMoney(ltvUnit);
+      outCapitalDestroyed.textContent = formatManualMoney(totalDestroyed);
+      outCacLost.textContent = formatManualMoney(lostCacTotal);
+      outRecovered.textContent = formatManualMoney(potentialRecovered);
+    }
+
+    if (inTicket) {
+      [inTicket, inFreq, inYears, inLeads, inCac].forEach(inp => {
+        inp.addEventListener('input', calculateManualLtv);
+      });
+    }
+
+    if (btnManUsd && btnManArs) {
+      btnManUsd.onclick = () => {
+        if (manualCurrency === 'USD') return;
+        manualCurrency = 'USD';
+        btnManUsd.classList.add('active');
+        btnManArs.classList.remove('active');
+        lblManTicket.textContent = 'Ticket Promedio ($ USD):';
+        lblManCac.textContent = 'CAC Estimado Pauta ($ USD):';
+        inTicket.value = Math.round((parseFloat(inTicket.value) || 1062500) / FX_RATE_MANUAL);
+        inCac.value = Math.round((parseFloat(inCac.value) || 150000) / FX_RATE_MANUAL);
+        calculateManualLtv();
+      };
+
+      btnManArs.onclick = () => {
+        if (manualCurrency === 'ARS') return;
+        manualCurrency = 'ARS';
+        btnManArs.classList.add('active');
+        btnManUsd.classList.remove('active');
+        lblManTicket.textContent = 'Ticket Promedio ($ ARS):';
+        lblManCac.textContent = 'CAC Estimado Pauta ($ ARS):';
+        inTicket.value = Math.round((parseFloat(inTicket.value) || 850) * FX_RATE_MANUAL);
+        inCac.value = Math.round((parseFloat(inCac.value) || 120) * FX_RATE_MANUAL);
+        calculateManualLtv();
+      };
+    }
+
   </script>
 
   <style>
@@ -920,6 +1002,36 @@
       color: var(--text-primary);
     }
 
+
+    /* Currency Toggle in Manual */
+    .currency-btn-group {
+      display: inline-flex;
+      background: var(--bg-card);
+      border-radius: 20px;
+      padding: 3px;
+      border: 1px solid var(--border-color);
+    }
+    .btn-curr {
+      background: transparent;
+      border: none;
+      outline: none;
+      padding: 5px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-curr:hover {
+      color: var(--text-primary);
+    }
+    .btn-curr.active {
+      background: var(--spoter-pink);
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(228, 45, 127, 0.4);
+    }
+
   </style>
 </head>
 <body>
@@ -1079,7 +1191,160 @@
         </div>
       </section>
 
-      <!-- 3. Oferta Grand Slam -->
+      <!-- 3. La Matemática del LTV -->
+      <section class="playbook-section" id="sec-ltv">
+        <div class="section-header">
+          <div class="section-num">3</div>
+          <h3>La Matemática del LTV: El Verdadero Costo de la No-Atención</h3>
+        </div>
+        <p class="section-lead">
+          El error contable más común de los empresarios es pensar: <em>"Bueno, el cliente no esperó y no compró hoy; perdimos una venta de $50 USD"</em>. <strong>Ese cálculo es falso.</strong> En cualquier empresa seria, el valor de un cliente no es su primera transacción: es su <strong>Lifetime Value (LTV)</strong> acumulado a lo largo del tiempo.
+        </p>
+
+        <!-- Calculadora Interactiva de LTV -->
+        <div class="ltv-calc-card">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+            <div>
+              <h4 style="font-size: 16px; font-weight: 800; color: var(--text-primary); margin: 0;">🧮 Calculadora de Destrucción de Capital LTV</h4>
+              <span style="font-size: 12px; color: var(--text-muted);">Ajustá los números del prospecto en vivo durante la reunión</span>
+            </div>
+            <div class="currency-btn-group" id="manualCurrToggle">
+              <button type="button" class="btn-curr active" id="btnManualUsd">💵 USD</button>
+              <button type="button" class="btn-curr" id="btnManualArs">🇦🇷 ARS</button>
+            </div>
+          </div>
+
+          <div class="ltv-grid-inputs">
+            <div class="ltv-input-group">
+              <label for="manInputTicket" id="lblManTicket">Ticket Promedio ($ USD):</label>
+              <input type="number" id="manInputTicket" value="850" min="10" step="10">
+            </div>
+            <div class="ltv-input-group">
+              <label for="manInputFreq">Compras al Año (Frecuencia):</label>
+              <input type="number" id="manInputFreq" value="4.0" min="0.5" step="0.5">
+            </div>
+            <div class="ltv-input-group">
+              <label for="manInputYears">Años de Retención del Cliente:</label>
+              <input type="number" id="manInputYears" value="2.0" min="0.5" step="0.5">
+            </div>
+            <div class="ltv-input-group">
+              <label for="manInputLeads">Leads Desatendidos / mes (> 15m):</label>
+              <input type="number" id="manInputLeads" value="25" min="1" step="1">
+            </div>
+            <div class="ltv-input-group">
+              <label for="manInputCac" id="lblManCac">CAC Estimado Pauta ($ USD):</label>
+              <input type="number" id="manInputCac" value="120" min="1" step="5">
+            </div>
+          </div>
+
+          <div class="ltv-result-banner">
+            <div class="ltv-metric-item">
+              <div class="val highlight-pink" id="manResLtvUnit">$6,800 USD</div>
+              <div class="lbl">LTV Unitario del Cliente</div>
+            </div>
+            <div class="ltv-metric-item">
+              <div class="val" style="color:#ef4444;" id="manResCapitalDestroyed">$113,500 USD</div>
+              <div class="lbl">Capital LTV Destruido / mes</div>
+            </div>
+            <div class="ltv-metric-item">
+              <div class="val" id="manResCacLost">$3,000 USD</div>
+              <div class="lbl">CAC de Pauta Desperdiciado</div>
+            </div>
+            <div class="ltv-metric-item">
+              <div class="val" style="color:#10b981;" id="manResRecovered">$85,125 USD</div>
+              <div class="lbl">Capital Protegido con Spoter (75%)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabla de Referencia de LTV por Industria -->
+        <h4 style="font-size: 15px; margin: 24px 0 12px 0; font-weight: 700;">Tabla de Referencia del Impacto en LTV por Industria</h4>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Sector / Rubro</th>
+                <th>Ticket Inicial Promedio</th>
+                <th>Frecuencia Anual</th>
+                <th>Años Retención</th>
+                <th>LTV Unitario Estimado</th>
+                <th>Impacto por Cada 10 Leads Perdidos</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>🧱 Construcción y Corralones</strong></td>
+                <td>$850 USD</td>
+                <td>4.0 compras/año</td>
+                <td>2.0 años</td>
+                <td class="text-good"><strong>$6,800 USD</strong></td>
+                <td class="text-bad"><strong>$44,200 USD</strong> destruidos</td>
+              </tr>
+              <tr>
+                <td><strong>🚗 Concesionarias y Talleres</strong></td>
+                <td>$12,000 USD</td>
+                <td>Compra + Services</td>
+                <td>3.0 años</td>
+                <td class="text-good"><strong>$36,000 USD</strong></td>
+                <td class="text-bad"><strong>$234,000 USD</strong> destruidos</td>
+              </tr>
+              <tr>
+                <td><strong>🏢 Inmobiliarias y Desarrollos</strong></td>
+                <td>$3,500 USD</td>
+                <td>Compra / Alquiler</td>
+                <td>3.5 años</td>
+                <td class="text-good"><strong>$45,000 USD</strong></td>
+                <td class="text-bad"><strong>$292,500 USD</strong> destruidos</td>
+              </tr>
+              <tr>
+                <td><strong>🏥 Salud, Obras Sociales y Prepagas</strong></td>
+                <td>$70 USD / mes</td>
+                <td>12 meses</td>
+                <td>3.5 años</td>
+                <td class="text-good"><strong>$2,940 USD</strong></td>
+                <td class="text-bad"><strong>$19,110 USD</strong> destruidos</td>
+              </tr>
+              <tr>
+                <td><strong>💳 Seguros y Finanzas / Fintech</strong></td>
+                <td>$50 USD / mes</td>
+                <td>12 meses</td>
+                <td>4.0 años</td>
+                <td class="text-good"><strong>$2,400 USD</strong></td>
+                <td class="text-bad"><strong>$15,600 USD</strong> destruidos</td>
+              </tr>
+              <tr>
+                <td><strong>🛍️ Comercio y Retail / E-commerce</strong></td>
+                <td>$50 USD</td>
+                <td>4.5 compras/año</td>
+                <td>2.0 años</td>
+                <td class="text-good"><strong>$450 USD</strong></td>
+                <td class="text-bad"><strong>$2,925 USD</strong> destruidos</td>
+              </tr>
+              <tr>
+                <td><strong>💻 Software, SaaS y Servicios B2B</strong></td>
+                <td>$280 USD / mes</td>
+                <td>12 meses</td>
+                <td>3.0 años</td>
+                <td class="text-good"><strong>$10,080 USD</strong></td>
+                <td class="text-bad"><strong>$65,520 USD</strong> destruidos</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Argumento Clave de Venta -->
+        <div class="pro-card" style="border-left: 5px solid #ef4444; background: var(--bg-card); margin-top: 16px;">
+          <span class="card-badge badge-danger">Argumento de Venta Inapelable para el CFO / Dueño</span>
+          <p style="font-size: 14px; line-height: 1.5; margin: 10px 0 14px 0;">
+            <em>"Cuando tu vendedor tarda 40 minutos en contestar en WhatsApp, no estás dejando sobre la mesa un ticket suelto: estás regalándole a tu competidor un cliente que durante los próximos dos años le va a dejar miles de dólares, mientras vos pagaste la factura publicitaria de Meta para conseguirlo."</em>
+          </p>
+          <button class="btn-copy-mini" data-copy="Cuando tu vendedor tarda 40 minutos en contestar en WhatsApp, no estás dejando sobre la mesa un ticket suelto: estás regalándole a tu competidor un cliente que durante los próximos dos años le va a dejar miles de dólares, mientras vos pagaste la factura publicitaria de Meta para conseguirlo.">
+            📋 Copiar Argumento LTV
+          </button>
+        </div>
+      </section>
+
+      <!-- 4. Oferta Grand Slam -->
       <section class="playbook-section" id="sec-grandslam">
         <div class="section-header">
           <div class="section-num">4</div>
@@ -1101,10 +1366,10 @@
         </div>
       </section>
 
-      <!-- 4. Argumentario ACTÚEN+ -->
+      <!-- 5. Argumentario ACTÚEN+ -->
       <section class="playbook-section" id="sec-pilares">
         <div class="section-header">
-          <div class="section-num">4</div>
+          <div class="section-num">5</div>
           <h3>Los 7 Pilares ACTÚEN+ como Argumentario Comercial</h3>
         </div>
         <p class="section-lead">
@@ -1233,10 +1498,97 @@
         </div>
       </section>
 
-      <!-- 5. Preguntas SPIN -->
+            <!-- 6. Triage Quirúrgico -->
+      <section class="playbook-section" id="sec-triage">
+        <div class="section-header">
+          <div class="section-num">6</div>
+          <h3>Triage Quirúrgico: Algoritmos IU / IC y Copiloto HITL</h3>
+        </div>
+        <p class="section-lead">
+          Uno de los mayores temores de los directivos es: <em>"No quiero que una Inteligencia Artificial alucine o conteste cualquier cosa a mis clientes VIP"</em>. Spoter resuelve esto con una arquitectura matemática revolucionaria: <strong>HITL (Human-in-the-Loop) gobernado por reglas determinísticas</strong>.
+        </p>
+
+        <div class="pro-card" style="background: var(--bg-card); border-left: 5px solid var(--spoter-pink); margin-bottom: 20px;">
+          <h4 style="font-size: 16px; margin-bottom: 8px;">Principio Rector de Spoter</h4>
+          <p style="font-size: 14px; font-weight: 600; color: var(--spoter-pink);">
+            "La IA interpreta el lenguaje. El IC cuantifica la intención. El IU ordena la cola. El Motor Lite decide la estrategia. El operador humano ejecuta asistido."
+          </p>
+        </div>
+
+        <div class="card-grid-2">
+          <!-- Tarjeta IC -->
+          <div class="triage-card">
+            <span class="triage-badge triage-badge-ic">🎯 IC • Índice de Conversión (0 a 100)</span>
+            <h4>¿Qué tan cerca de comprar está el cliente?</h4>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
+              No es una opinión subjetiva. Se calcula matemáticamente con 5 variables objetivas y calibración semántica MASS:
+            </p>
+            <ul class="triage-list">
+              <li><span><strong>E (Etapa del Embudo):</strong> Cotización, negociación o cierre</span> <span>0 a 25 pts</span></li>
+              <li><span><strong>I (Intención Observable):</strong> Catálogo, cuotas, CBU o stock</span> <span>0 a 30 pts</span></li>
+              <li><span><strong>G (Engagement y Ritmo):</strong> Velocidad de respuesta del cliente</span> <span>0 a 20 pts</span></li>
+              <li><span><strong>H (Habilitantes):</strong> DNI, dirección de obra, modelo</span> <span>0 a 15 pts</span></li>
+              <li><span><strong>R (Reconexión):</strong> Retorno espontáneo tras silencio</span> <span>0 a 10 pts</span></li>
+              <li><span><strong>Calibración Semántica MASS:</strong> Objeción vs señal de compra</span> <span>[-15, +15] pts</span></li>
+            </ul>
+          </div>
+
+          <!-- Tarjeta IU -->
+          <div class="triage-card">
+            <span class="triage-badge triage-badge-iu">⚡ IU • Índice de Urgencia (0 a 100)</span>
+            <h4>¿A quién atiende el operador en este segundo?</h4>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
+              Destruye el cuello de botella de la atención por orden de llegada (FIFO). Ordena la bandeja en tiempo real:
+            </p>
+            <ul class="triage-list">
+              <li><span><strong>Módulo A (Contexto & Origen):</strong> Pauta Meta/Google o VIP</span> <span>Ponderado</span></li>
+              <li><span><strong>Módulo B (SLA & Espera):</strong> Curva asintótica contra SLA</span> <span>Ponderado</span></li>
+              <li><span><strong>Módulo C (Compromisos Horarios):</strong> Llamadas pactadas</span> <span>Ponderado</span></li>
+              <li><span><strong>Módulo D (Intención IC):</strong> Leads calientes al puesto #1</span> <span>Prioridad Máxima</span></li>
+              <li><span><strong>Regla Anti-Inanición:</strong> Nadie queda postergado eternamente</span> <span>Garantizado</span></li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Spoter Lite y Protección Meta 24h -->
+        <div class="pro-card" style="margin-top: 20px;">
+          <h4 style="font-size: 16px; margin-bottom: 10px;">⚡ Spoter Lite: El Motor Determinístico de Fases y Rescate</h4>
+          <p style="font-size: 13.5px; color: var(--text-secondary); margin-bottom: 14px;">
+            Spoter Lite no genera respuestas descontroladas ni insiste eternamente. Opera bajo 3 fases predecibles:
+          </p>
+          <div class="card-grid-2" style="gap: 14px;">
+            <div style="background: var(--bg-primary); padding: 14px; border-radius: 8px; border: 1px solid var(--border-color);">
+              <strong style="color: #10b981;">1. Fase de Gracia (&lt; 30% sesión):</strong>
+              <p style="font-size: 12.5px; color: var(--text-secondary); margin-top: 4px;">
+                No descarta prospectos al inicio. Si un lead no contesta en el primer turno, se le da espacio sin quemar el contacto.
+              </p>
+            </div>
+            <div style="background: var(--bg-primary); padding: 14px; border-radius: 8px; border: 1px solid var(--border-color);">
+              <strong style="color: #f59e0b;">2. Fase de Trabajo (30% a 60% sesión):</strong>
+              <p style="font-size: 12.5px; color: var(--text-secondary); margin-top: 4px;">
+                Alerta caídas de intención y asiste al operador sugiriendo promociones, fotos de stock o prueba social.
+              </p>
+            </div>
+            <div style="background: var(--bg-primary); padding: 14px; border-radius: 8px; border: 1px solid var(--border-color);">
+              <strong style="color: var(--spoter-pink);">3. Cierre y Ventana de Rescate (60% a 100%):</strong>
+              <p style="font-size: 12.5px; color: var(--text-secondary); margin-top: 4px;">
+                Ejecuta el <strong>Último Rescate</strong> (pregunta resolutiva de un toque para recuperar presupuestos dormidos).
+              </p>
+            </div>
+            <div style="background: var(--bg-primary); padding: 14px; border-radius: 8px; border: 1px solid var(--border-color);">
+              <strong style="color: #60a5fa;">⏱️ Blindaje Ventana 24h Meta API:</strong>
+              <p style="font-size: 12.5px; color: var(--text-secondary); margin-top: 4px;">
+                Alerta preventiva a las 20 horas de inactividad para garantizar el cierre dentro de la ventana gratuita de WhatsApp.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7. Preguntas SPIN -->
       <section class="playbook-section" id="sec-spin">
         <div class="section-header">
-          <div class="section-num">5</div>
+          <div class="section-num">7</div>
           <h3>Guion Interactivo de Preguntas SPIN</h3>
         </div>
         <p class="section-lead">
@@ -1320,7 +1672,7 @@
       <!-- 6. Demo con Analizador -->
       <section class="playbook-section" id="sec-demo">
         <div class="section-header">
-          <div class="section-num">6</div>
+          <div class="section-num">8</div>
           <h3>Paso a Paso: Cómo Conducir una Demo Demoledora</h3>
         </div>
         <p class="section-lead">
@@ -1373,7 +1725,7 @@
       <!-- 7. Manejo de Objeciones -->
       <section class="playbook-section" id="sec-objeciones">
         <div class="section-header">
-          <div class="section-num">7</div>
+          <div class="section-num">9</div>
           <h3>Manejo de Objeciones de Élite (Flashcards con Scripts)</h3>
         </div>
         <p class="section-lead">
@@ -1494,7 +1846,7 @@
       <!-- 8. Scripts de Contacto -->
       <section class="playbook-section" id="sec-scripts">
         <div class="section-header">
-          <div class="section-num">8</div>
+          <div class="section-num">10</div>
           <h3>Scripts Listos para Enviar (WhatsApp & LinkedIn)</h3>
         </div>
         <p class="section-lead">
@@ -1637,6 +1989,88 @@
         }
       });
     });
+
+    // LTV Calculator Interactive Logic
+    let manualCurrency = 'USD';
+    const FX_RATE_MANUAL = 1250;
+
+    const inTicket = document.getElementById('manInputTicket');
+    const inFreq = document.getElementById('manInputFreq');
+    const inYears = document.getElementById('manInputYears');
+    const inLeads = document.getElementById('manInputLeads');
+    const inCac = document.getElementById('manInputCac');
+
+    const lblManTicket = document.getElementById('lblManTicket');
+    const lblManCac = document.getElementById('lblManCac');
+
+    const outLtvUnit = document.getElementById('manResLtvUnit');
+    const outCapitalDestroyed = document.getElementById('manResCapitalDestroyed');
+    const outCacLost = document.getElementById('manResCacLost');
+    const outRecovered = document.getElementById('manResRecovered');
+
+    const btnManUsd = document.getElementById('btnManualUsd');
+    const btnManArs = document.getElementById('btnManualArs');
+
+    function formatManualMoney(amount) {
+      if (manualCurrency === 'ARS') {
+        return '$' + Math.round(amount).toLocaleString('es-AR') + ' ARS';
+      }
+      return '$' + Math.round(amount).toLocaleString('en-US') + ' USD';
+    }
+
+    function calculateManualLtv() {
+      if (!inTicket || !inFreq || !inYears || !inLeads || !inCac) return;
+      const ticket = parseFloat(inTicket.value) || 0;
+      const freq = parseFloat(inFreq.value) || 0;
+      const years = parseFloat(inYears.value) || 0;
+      const leads = parseFloat(inLeads.value) || 0;
+      const cac = parseFloat(inCac.value) || 0;
+
+      const ltvUnit = ticket * freq * years;
+      const lostImmediate = leads * ticket * 0.65;
+      const lostLtvTotal = leads * ltvUnit * 0.65;
+      const lostCacTotal = leads * cac;
+      const totalDestroyed = lostLtvTotal + lostCacTotal;
+      const potentialRecovered = totalDestroyed * 0.75;
+
+      outLtvUnit.textContent = formatManualMoney(ltvUnit);
+      outCapitalDestroyed.textContent = formatManualMoney(totalDestroyed);
+      outCacLost.textContent = formatManualMoney(lostCacTotal);
+      outRecovered.textContent = formatManualMoney(potentialRecovered);
+    }
+
+    if (inTicket) {
+      [inTicket, inFreq, inYears, inLeads, inCac].forEach(inp => {
+        inp.addEventListener('input', calculateManualLtv);
+      });
+    }
+
+    if (btnManUsd && btnManArs) {
+      btnManUsd.onclick = () => {
+        if (manualCurrency === 'USD') return;
+        manualCurrency = 'USD';
+        btnManUsd.classList.add('active');
+        btnManArs.classList.remove('active');
+        lblManTicket.textContent = 'Ticket Promedio ($ USD):';
+        lblManCac.textContent = 'CAC Estimado Pauta ($ USD):';
+        inTicket.value = Math.round((parseFloat(inTicket.value) || 1062500) / FX_RATE_MANUAL);
+        inCac.value = Math.round((parseFloat(inCac.value) || 150000) / FX_RATE_MANUAL);
+        calculateManualLtv();
+      };
+
+      btnManArs.onclick = () => {
+        if (manualCurrency === 'ARS') return;
+        manualCurrency = 'ARS';
+        btnManArs.classList.add('active');
+        btnManUsd.classList.remove('active');
+        lblManTicket.textContent = 'Ticket Promedio ($ ARS):';
+        lblManCac.textContent = 'CAC Estimado Pauta ($ ARS):';
+        inTicket.value = Math.round((parseFloat(inTicket.value) || 850) * FX_RATE_MANUAL);
+        inCac.value = Math.round((parseFloat(inCac.value) || 120) * FX_RATE_MANUAL);
+        calculateManualLtv();
+      };
+    }
+
   </script>
 </body>
 </html>
