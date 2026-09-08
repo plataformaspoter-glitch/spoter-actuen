@@ -2313,3 +2313,271 @@ input[type="range"] {
   gap: 8px;
   flex-wrap: wrap;
 }
+
+/* ==========================================================================
+   AUDITORÍA DE BRECHAS DE AUTOMATIZACIÓN & DISPARADORES DE HANDOFF
+   ========================================================================== */
+.gap-audit-panel {
+  border-top: 3px solid #06b6d4 !important;
+  background: var(--bg-card);
+  position: relative;
+}
+
+.gap-audit-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.gap-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.gap-metric-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md, 8px);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gap-metric-card.alert {
+  border-color: rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.04);
+}
+
+.gap-metric-card.alert .gap-metric-val {
+  color: #ef4444;
+}
+
+.gap-metric-card.success {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.04);
+}
+
+.gap-metric-card.success .gap-metric-val {
+  color: #10b981;
+}
+
+.gap-metric-title {
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.gap-metric-val {
+  font-size: 26px;
+  font-weight: 800;
+  font-family: var(--font-heading);
+  color: var(--text-primary);
+  line-height: 1.15;
+}
+
+.gap-metric-sub {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+/* Barra comparativa de distribución causal */
+.gap-bar-container {
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md, 8px);
+  padding: 14px 18px;
+}
+
+.gap-bar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.gap-bar-track {
+  height: 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  overflow: hidden;
+  margin: 10px 0 8px 0;
+}
+
+.gap-bar-fill.avoidable {
+  background: linear-gradient(90deg, #ef4444, #f59e0b);
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.gap-bar-fill.consultative {
+  background: #10b981;
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.gap-bar-legend {
+  display: flex;
+  gap: 20px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+
+/* Tarjetas de ranking de disparadores de handoff */
+.gap-triggers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.gap-trigger-item {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md, 8px);
+  padding: 18px 20px;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.gap-trigger-item:hover {
+  border-color: rgba(6, 182, 212, 0.45);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.gap-trigger-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.gap-trigger-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gap-trigger-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.gap-trigger-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.gap-trigger-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.gap-chip {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+}
+
+.gap-chip.avoidable {
+  background: rgba(239, 68, 68, 0.14);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.gap-chip.consultative {
+  background: rgba(16, 185, 129, 0.14);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.gap-chip.hours {
+  background: rgba(245, 158, 11, 0.14);
+  color: #fcd34d;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.gap-trigger-quotes {
+  background: rgba(0, 0, 0, 0.2);
+  border-left: 3px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0 6px 6px 0;
+  padding: 10px 14px;
+  margin: 10px 0;
+}
+
+.gap-quotes-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.gap-quote-pill {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.gap-quote-pill:last-child {
+  margin-bottom: 0;
+}
+
+.gap-trigger-solution {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.gap-solution-text {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  flex: 1;
+}
+
+.gap-solution-text strong {
+  color: var(--text-primary);
+}
+
+.btn-jump-template {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 6px;
+  background: rgba(6, 182, 212, 0.12);
+  color: #38bdf8;
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.btn-jump-template:hover {
+  background: rgba(6, 182, 212, 0.22);
+  border-color: #38bdf8;
+  color: #fff;
+  transform: translateY(-1px);
+}

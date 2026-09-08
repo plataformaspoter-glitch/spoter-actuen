@@ -197,6 +197,10 @@ Pasadas 24 horas del último mensaje del cliente, Meta prohíbe el texto libre y
    * Alterná entre **`[ 💵 USD ]`** y **`[ 🇦🇷 ARS ]`** y ajustá con el cliente los sliders de *Ticket Promedio*, *Frecuencia Anual* y *Retención* para que vea el capital protegido en vivo.
 6. **El Semáforo ACTÚEN+ y Ping-Pong Calibrado por Rubro:**  
    * Mostrá el estándar adaptado a su industria (ej. 6.5 msgs) y las **Respuestas Maestras** en 1 solo bloque estructurado.
+7. **El Escáner de Brechas de Automatización (Pestaña 4 - Fugas & Tiempos):**  
+   * Mostrá el módulo **«Brechas de Automatización: ¿Por qué intervienen los Asesores?»**.
+   * Destacá la cifra demoledora: *"Mirá tu pantalla: el 90%+ de las veces que tus operadores salieron a atender manualmente, fue por solo 3 preguntas estándar (precios básicos, fletes/zonas de entrega y formas de pago/factura A). Están quemando cientos de horas al mes de personas reales en tareas que una Base de Conocimiento Inteligente de Spoter resuelve en mensaje cero."*
+   * Hacé clic en **`👉 Ver Solución Spoter`** para saltar a las Plantillas Maestras y mostrar la respuesta condensada.
 
 ---
 
@@ -221,6 +225,13 @@ Pasadas 24 horas del último mensaje del cliente, Meta prohíbe el texto libre y
 * **Fundamento:** Cada día que pasa sin Spoter se sigue destruyendo capital publicitario.
 * **Guion de Respuesta:**  
   > *"Entiendo perfectamente que tengas prioridades. La pregunta es: si tu Analizador muestra que hoy estás perdiendo 12 leads calientes por semana por demoras en Zona Fría, esperar un mes significa regalarle otros 50 clientes y miles de dólares a tu competencia. En 5 minutos corremos el diagnóstico gratuito y tomás la decisión con tus números en la mano."*
+
+### Objeción 5: *"Ya pusimos un bot o menú en WhatsApp hace un tiempo y no nos sirvió: los clientes se frustran y terminan pidiendo hablar con un humano o abandonan."*
+* **Fundamento:** Los bots tradicionales basados en árboles de decisión rígidos (ej. *Presione 1, 2 o 3*) son ciegos semánticamente. Cuando el cliente escribe una frase natural, el bot no sabe qué hacer, genera fricción y deriva todo al operador humano.
+* **Guion de Respuesta:**  
+  > *"Totalmente comprensible, y de hecho es exactamente lo que vemos en el 90% de las empresas que auditamos: los bots viejos fracasan porque son menús telefónicos trasladados a WhatsApp. Si el cliente escribe '¿cuánto me sale el envío a Pilar con descarga?', el bot no entiende y le tira el problema a tu vendedor.  
+  > En tu auditoría detectamos que más del 90% de los clientes que pidieron hablar con un asesor o que sacaron a tu equipo a la cancha, preguntaron exactamente las mismas 3 cosas estándar (precios de catálogo, fletes y facturación).  
+  > Spoter no es un árbol rígido: es un motor con Inteligencia Artificial y Base de Conocimiento RAG que entiende el lenguaje del cliente, responde la duda en 1 solo bloque estructurado con viñetas, y solo deriva al operador cuando hay una negociación o compra real, entregándole la ficha con el plan de acción listo."*
 
 ---
 

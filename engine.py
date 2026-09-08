@@ -723,6 +723,8 @@ class ActuenAnalyzer:
             client_conversations, rubro_info, sla, wait_times, final_focus
         )
 
+        handoff_gap_analysis = self._compute_handoff_gap_analysis(client_conversations, operator_counts)
+
         actuen_scorecard = self._evaluate_actuen_dynamic(
             focus=final_focus,
             rubro_name=rubro_info['name'],
@@ -794,6 +796,7 @@ class ActuenAnalyzer:
             },
             "schedule": first_contact_schedule,
             "handoff": handoff_data,
+            "handoff_gap_analysis": handoff_gap_analysis,
             "fragmentation": {
                 "rate": round(fragmentation_rate, 1),
                 "burst_1_msg": b_1,
@@ -1562,3 +1565,194 @@ class ActuenAnalyzer:
                 "content": t["after"]
             })
         return json.dumps(canned, ensure_ascii=False, indent=2)
+
+
+    def _compute_handoff_gap_analysis(self, client_conversations, operator_counts):
+        is_bot_re = re.compile(r'bot|sistema|auto|automatiz', re.IGNORECASE)
+        human_req_re = re.compile(r'\b(asesor|operador|humano|persona|alguien|ayuda|atenci[oó]n|hablar con|no me entend|pasame|comunicarme)\b', re.IGNORECASE)
+
+        categories_def = [
+            {
+                "key": "precios_catalogo",
+                "title": "Cotizaciones y Precios de Catálogo Básico",
+                "icon": "📋",
+                "regex": re.compile(r'precio|cuanto sale|cuánto sale|cuanto esta|cuánto está|lista|catalogo|catálogo|valor|cotizacion|cotización|presupuesto|costo|cotizame|bolsa|cemento|hierro|chapa|ladrillo|metro|arena|presupuest', re.IGNORECASE),
+                "feasibility": "Alta (Inmediata)",
+                "solution_type": "Base de Conocimiento RAG",
+                "solution_action": "Sincronizar lista de precios o catálogo PDF en Spoter para cotizaciones instantáneas en un solo bloque estructurado.",
+                "template_target_id": "tplCeroVueltas1"
+            },
+            {
+                "key": "pagos_facturacion",
+                "title": "Pagos, Alias, CBU y Facturación A / B",
+                "icon": "💳",
+                "regex": re.compile(r'pago|factura|factura a|tarjeta|cuota|transferencia|efectivo|debito|débito|mercadopago|alias|cbu|iva|afip|fiscal|descuento efectivo|forma de pago|medios de pago', re.IGNORECASE),
+                "feasibility": "Alta (Inmediata)",
+                "solution_type": "Atajo Maestro Inmediato",
+                "solution_action": "Configurar atajo de medios de pago y recolección automática de CUIT/Razón Social en mensaje cero.",
+                "template_target_id": "tplCeroVueltas3"
+            },
+            {
+                "key": "envios_logistica",
+                "title": "Envíos, Fletes y Zonas de Reparto",
+                "icon": "🚚",
+                "regex": re.compile(r'envio|envío|flete|despacho|entrega|zona|domicilio|llegan a|pilar|lujan|luján|capital|costo de envio|cuanto sale el envio|flete a|traer|camion|camión|reparto', re.IGNORECASE),
+                "feasibility": "Alta (Inmediata)",
+                "solution_type": "Matriz de Zonas Spoter",
+                "solution_action": "Cargar radios de entrega, tarifas de flete por zona y requisitos de descarga en la Base de Conocimiento.",
+                "template_target_id": "tplCeroVueltas2"
+            },
+            {
+                "key": "stock_disponibilidad",
+                "title": "Stock, Disponibilidad y Retiro en Sucursal",
+                "icon": "📦",
+                "regex": re.compile(r'stock|tienen|hay|disponible|disponibilidad|para retirar|queda|retirar hoy|entrega inmediata|conseguir|medida|cambio|cambiar', re.IGNORECASE),
+                "feasibility": "Media (Integración)",
+                "solution_type": "Consulta de Inventario Spoter",
+                "solution_action": "Vincular stock mínimo y condiciones de retiro para responder sin consultar al depósito.",
+                "template_target_id": "tplCeroVueltas4"
+            },
+            {
+                "key": "ubicacion_horarios",
+                "title": "Ubicación, Sucursales y Horarios Comerciales",
+                "icon": "📍",
+                "regex": re.compile(r'horario|abierto|direccion|dirección|donde estan|dónde están|ubicacion|ubicación|sucursal|donde queda|dónde queda|mapa|hasta que hora|sabado abren|sábado', re.IGNORECASE),
+                "feasibility": "Alta (Inmediata)",
+                "solution_type": "Ficha Comercial en Bienvenida",
+                "solution_action": "Incluir enlace directo a Google Maps, horarios de carga y sucursales en el mensaje inicial.",
+                "template_target_id": "tplCeroVueltas5"
+            },
+            {
+                "key": "estado_pedido",
+                "title": "Estado de Pedido y Seguimiento de Despacho",
+                "icon": "🔄",
+                "regex": re.compile(r'mi pedido|cuando llega|cuándo llega|estado|seguimiento|despacharon|comprobante|ya pague|ya pagué|demora el pedido|salio el camion|salio el reparto', re.IGNORECASE),
+                "feasibility": "Media (Integración)",
+                "solution_type": "Seguimiento Automatizado",
+                "solution_action": "Integrar webhook de estado de despacho y confirmación de recepción automática.",
+                "template_target_id": "tplCeroVueltas6"
+            },
+            {
+                "key": "frustracion_menu",
+                "title": "Bypass de Menú Rígido y Solicitud de Operador",
+                "icon": "⚠️",
+                "regex": re.compile(r'no me sirve|no entiendo|otra cosa|no es lo que pregunte|mala atencion|hablar con|asesor|humano|persona|alguien|operador', re.IGNORECASE),
+                "feasibility": "Alta (Conversacional)",
+                "solution_type": "IA Conversacional Spoter",
+                "solution_action": "Eliminar el árbol numérico rígido y permitir lenguaje natural fluido con prompts entrenados.",
+                "template_target_id": "tplCeroVueltas1"
+            },
+            {
+                "key": "venta_consultiva",
+                "title": "Venta Consultiva Mayorista y Grandes Obras",
+                "icon": "🤝",
+                "regex": re.compile(r'constructora|obra grande|cuenta corriente|licitacion|licitación|acopio|volumen|distribuidor|arquitecto|presupuesto formal', re.IGNORECASE),
+                "feasibility": "Consultiva (Humano)",
+                "solution_type": "Copiloto HITL Spoter",
+                "solution_action": "Derivación guiada con ficha de intencionalidad comercial y urgencia pre-cargada para el asesor.",
+                "template_target_id": "tplCeroVueltas7"
+            }
+        ]
+
+        total_human_convs = 0
+        category_counts = Counter()
+        category_hours = defaultdict(float)
+        category_samples = defaultdict(list)
+
+        for cid, msgs in client_conversations.items():
+            has_human = False
+            first_human_idx = -1
+            for idx, m in enumerate(msgs):
+                if m.get('Propio', '').strip().lower() == 'si':
+                    op = m.get('Nombre Operador', '').strip() or 'Bot / Sistema'
+                    if not is_bot_re.search(op):
+                        has_human = True
+                        first_human_idx = idx
+                        break
+
+            if not has_human:
+                continue
+
+            total_human_convs += 1
+
+            client_msgs_before = []
+            for idx in range(first_human_idx):
+                m = msgs[idx]
+                if m.get('Propio', '').strip().lower() != 'si':
+                    txt = m.get('Mensaje', '').strip()
+                    if txt and txt not in ('[AUDIO]', '[IMAGEN]') and len(txt) > 2:
+                        client_msgs_before.append(txt)
+
+            explicit_req = any(human_req_re.search(t) for t in client_msgs_before)
+            free_texts = [t for t in client_msgs_before if not t.startswith('.') and len(t) > 6]
+            menu_texts = [t for t in client_msgs_before if t.startswith('.')]
+
+            substantive_text = free_texts[-1] if free_texts else (menu_texts[-1] if menu_texts else (client_msgs_before[-1] if client_msgs_before else ''))
+            combined_search_text = ' '.join(client_msgs_before)
+
+            matched_cat_key = None
+            for cdef in categories_def:
+                if cdef["regex"].search(substantive_text) or cdef["regex"].search(combined_search_text):
+                    matched_cat_key = cdef["key"]
+                    break
+
+            if not matched_cat_key:
+                if explicit_req:
+                    matched_cat_key = "frustracion_menu"
+                elif any('. venta' in t.lower() or '. cotiz' in t.lower() for t in menu_texts):
+                    matched_cat_key = "precios_catalogo"
+                elif any('. logistica' in t.lower() or '. envio' in t.lower() for t in menu_texts):
+                    matched_cat_key = "envios_logistica"
+                elif any('. info' in t.lower() for t in menu_texts):
+                    matched_cat_key = "ubicacion_horarios"
+                else:
+                    matched_cat_key = "precios_catalogo"
+
+            human_msgs_count = sum(1 for m in msgs if m.get('Propio', '').strip().lower() == 'si' and not is_bot_re.search(m.get('Nombre Operador', '')))
+            est_hours = (human_msgs_count * 0.75) / 60.0
+
+            category_counts[matched_cat_key] += 1
+            category_hours[matched_cat_key] += est_hours
+
+            sample_cand = substantive_text if (substantive_text and not substantive_text.startswith('.')) else (free_texts[0] if free_texts else substantive_text)
+            if sample_cand and len(sample_cand) < 140 and len(category_samples[matched_cat_key]) < 3:
+                clean_cand = sample_cand.replace('\n', ' ').strip()
+                if clean_cand not in category_samples[matched_cat_key] and len(clean_cand) > 6:
+                    category_samples[matched_cat_key].append(clean_cand)
+
+        avoidable_keys = {"precios_catalogo", "pagos_facturacion", "envios_logistica", "stock_disponibilidad", "ubicacion_horarios", "estado_pedido", "frustracion_menu"}
+        avoidable_count = sum(category_counts[k] for k in avoidable_keys)
+        avoidable_pct = round((avoidable_count / (total_human_convs or 1)) * 100, 1)
+        avoidable_hours = sum(category_hours[k] for k in avoidable_keys)
+
+        top_triggers = []
+        for cdef in categories_def:
+            k = cdef["key"]
+            cnt = category_counts[k]
+            if cnt > 0:
+                top_triggers.append({
+                    "category_key": k,
+                    "title": cdef["title"],
+                    "icon": cdef["icon"],
+                    "count": cnt,
+                    "percentage": round((cnt / (total_human_convs or 1)) * 100, 1),
+                    "human_hours_spent": round(category_hours[k], 1),
+                    "is_avoidable": k in avoidable_keys,
+                    "automation_feasibility": cdef["feasibility"],
+                    "solution_type": cdef["solution_type"],
+                    "solution_action": cdef["solution_action"],
+                    "sample_client_phrases": category_samples.get(k, []),
+                    "template_target_id": cdef["template_target_id"]
+                })
+
+        top_triggers.sort(key=lambda x: x["count"], reverse=True)
+
+        return {
+            "total_human_handoffs": total_human_convs,
+            "avoidable_handoffs_count": avoidable_count,
+            "avoidable_handoffs_percentage": avoidable_pct,
+            "consultative_handoffs_count": total_human_convs - avoidable_count,
+            "consultative_handoffs_percentage": round(100 - avoidable_pct, 1),
+            "recoverable_hours_month": round(avoidable_hours, 1),
+            "top_triggers": top_triggers
+        }

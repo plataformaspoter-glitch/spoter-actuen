@@ -961,6 +961,7 @@ function renderAnalysis(data) {
   renderTopics(data.topics, isSales);
   renderFrictionCharts(data);
   renderScheduleCharts(data.schedule);
+  renderHandoffGapAnalysis(data.handoff_gap_analysis);
   renderTemplates(data.master_templates, isSales);
   
   // 8. Explicación fundamentada del Simulador
@@ -2250,4 +2251,128 @@ function downloadClientReportFallback(data) {
 
 Generado por el Analizador Spoter ACTÚEN+.`;
   downloadBlob(md, `auditoria_spoter_${comp.toLowerCase().replace(/\s+/g, '_')}.md`, 'text/markdown;charset=utf-8');
+}
+
+
+// --- AUDITORÍA DE BRECHAS DE AUTOMATIZACIÓN & DISPARADORES DE HANDOFF ---
+function renderHandoffGapAnalysis(gap) {
+  const panel = document.getElementById('handoffGapPanel');
+  if (!panel) return;
+
+  if (!gap) {
+    panel.style.display = 'none';
+    return;
+  }
+  panel.style.display = 'block';
+
+  // 1. Métricas de Cabecera
+  const totalHandoffs = gap.total_human_handoffs || 0;
+  const avoidablePct = gap.avoidable_handoffs_percentage || 0;
+  const avoidableCount = gap.avoidable_handoffs_count || 0;
+  const recoverableHours = gap.recoverable_hours_month || 0;
+  const consultativePct = gap.consultative_handoffs_percentage || (100 - avoidablePct);
+
+  const elTotal = document.getElementById('valGapTotalHandoffs');
+  if (elTotal) elTotal.textContent = totalHandoffs.toLocaleString();
+
+  const elAvoidPct = document.getElementById('valGapAvoidablePct');
+  if (elAvoidPct) elAvoidPct.textContent = `${avoidablePct}%`;
+
+  const elAvoidCnt = document.getElementById('valGapAvoidableCount');
+  if (elAvoidCnt) elAvoidCnt.textContent = `${avoidableCount.toLocaleString()} chats por dudas estándar`;
+
+  const elRecHours = document.getElementById('valGapRecoverableHours');
+  if (elRecHours) elRecHours.textContent = `${recoverableHours} hs/mes`;
+
+  const badgeSummary = document.getElementById('badgeGapSummary');
+  if (badgeSummary) {
+    if (avoidablePct > 60) {
+      badgeSummary.className = 'status-badge alert';
+      badgeSummary.textContent = `🔴 Fuga Crítica de Automatización (${avoidablePct}%)`;
+    } else if (avoidablePct > 30) {
+      badgeSummary.className = 'status-badge warning';
+      badgeSummary.textContent = `🟡 Fuga Moderada (${avoidablePct}%)`;
+    } else {
+      badgeSummary.className = 'status-badge success';
+      badgeSummary.textContent = `🟢 Automatización Óptima`;
+    }
+  }
+
+  // 2. Barra de Proporción Causal
+  const txtRatio = document.getElementById('txtGapRatioLabel');
+  if (txtRatio) {
+    txtRatio.textContent = `${avoidablePct}% Preguntas Estándar vs ${consultativePct}% Venta Consultiva`;
+  }
+
+  const barAvoidable = document.getElementById('barGapAvoidable');
+  const barConsultative = document.getElementById('barGapConsultative');
+  if (barAvoidable && barConsultative) {
+    barAvoidable.style.width = `${Math.max(5, Math.min(95, avoidablePct))}%`;
+    barConsultative.style.width = `${Math.max(5, Math.min(95, consultativePct))}%`;
+  }
+
+  // 3. Ranking de Disparadores
+  const listContainer = document.getElementById('gapTriggersList');
+  if (!listContainer) return;
+  listContainer.innerHTML = '';
+
+  const triggers = gap.top_triggers || [];
+  triggers.forEach((trig, idx) => {
+    const item = document.createElement('div');
+    item.className = 'gap-trigger-item';
+
+    const quotesHtml = (trig.sample_client_phrases && trig.sample_client_phrases.length)
+      ? `<div class="gap-trigger-quotes">
+           <div class="gap-quotes-label">💬 Lo que preguntan los clientes antes de que intervenga el operador:</div>
+           ${trig.sample_client_phrases.map(q => `<div class="gap-quote-pill">"${escapeHtml(q)}"</div>`).join('')}
+         </div>`
+      : '';
+
+    const badgeFeasibilityClass = trig.is_avoidable ? 'avoidable' : 'consultative';
+
+    item.innerHTML = `
+      <div class="gap-trigger-header">
+        <div class="gap-trigger-identity">
+          <span class="gap-trigger-icon">${trig.icon || '📌'}</span>
+          <div>
+            <h5 class="gap-trigger-title">${idx + 1}. ${escapeHtml(trig.title)}</h5>
+            <span style="font-size: 11.5px; color: var(--text-muted);">
+              Impacto: <strong>${trig.percentage}%</strong> de las intervenciones humanas (${trig.count.toLocaleString()} chats)
+            </span>
+          </div>
+        </div>
+        <div class="gap-trigger-badges">
+          <span class="gap-chip ${badgeFeasibilityClass}">${trig.automation_feasibility}</span>
+          <span class="gap-chip hours">⏱️ ${trig.human_hours_spent} hs tipeando</span>
+        </div>
+      </div>
+
+      ${quotesHtml}
+
+      <div class="gap-trigger-solution">
+        <div class="gap-solution-text">
+          💡 <strong>Acción Spoter recomendada (${escapeHtml(trig.solution_type)}):</strong> 
+          ${escapeHtml(trig.solution_action)}
+        </div>
+        <button class="btn-jump-template" data-template-id="${trig.template_target_id || ''}" type="button">
+          👉 Ver Solución Spoter
+        </button>
+      </div>
+    `;
+
+    const jumpBtn = item.querySelector('.btn-jump-template');
+    if (jumpBtn) {
+      jumpBtn.addEventListener('click', () => {
+        const tabBtn = document.querySelector('.tab-btn[data-tab="tabTemplates"]');
+        if (tabBtn) {
+          tabBtn.click();
+          showToast(`⚡ Mostrando Plantilla Maestra para: ${trig.title.split(' ')[1] || 'esta duda'}`);
+          const target = document.getElementById('templatesList');
+          if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    }
+
+    listContainer.appendChild(item);
+  });
 }
