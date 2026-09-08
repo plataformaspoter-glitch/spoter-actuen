@@ -134,9 +134,16 @@ function initExecutiveControls() {
   const selectFocus = document.getElementById('selectFocus');
   const selectHandoff = document.getElementById('selectHandoff');
 
+  // Inicializar política de handoff guardada
+  const savedHandoff = localStorage.getItem('spoter_handoff_policy');
+  if (savedHandoff && selectHandoff) {
+    selectHandoff.value = savedHandoff;
+  }
+
   const triggerReload = () => {
-    const focusVal = selectFocus.value === 'auto' ? null : selectFocus.value;
-    const handoffVal = selectHandoff.value;
+    const focusVal = selectFocus ? (selectFocus.value === 'auto' ? null : selectFocus.value) : null;
+    const handoffVal = selectHandoff ? selectHandoff.value : (localStorage.getItem('spoter_handoff_policy') || 'hybrid');
+    localStorage.setItem('spoter_handoff_policy', handoffVal);
     const rubroVal = currentData && currentData.meta ? currentData.meta.detected_rubro_key : null;
     if (currentFiles && currentFiles.length) {
       handleFiles(currentFiles, rubroVal, focusVal, handoffVal, true);
@@ -145,18 +152,60 @@ function initExecutiveControls() {
     }
   };
 
-  selectFocus.addEventListener('change', triggerReload);
-  selectHandoff.addEventListener('change', triggerReload);
+  if (selectFocus) selectFocus.addEventListener('change', triggerReload);
+  
+  if (selectHandoff) {
+    selectHandoff.addEventListener('change', (e) => {
+      const newVal = e.target.value;
+      localStorage.setItem('spoter_handoff_policy', newVal);
+      if (currentData) {
+        currentData.meta.handoff_policy = newVal;
+        if (currentData.handoff) currentData.handoff.policy = newVal;
+        renderBottleneckKPI(currentData.handoff);
+        renderQualificationPanel(currentData);
+        updateScorecardHandoff(currentData, newVal);
+        const policyLabel = selectHandoff.options[selectHandoff.selectedIndex].text;
+        showToast(`🤖 Política de Handoff actualizada: ${policyLabel}`);
+      }
+      triggerReload();
+    });
+  }
 
-  // Botones de la barra superior
-  document.getElementById('btnTopDownloadReport').addEventListener('click', () => {
-    window.location.href = '/api/export/report';
-    showToast("📥 Descargando informe ejecutivo (.md)...");
-  });
+  // Menú de exportación discreto
+  const btnToggleExport = document.getElementById('btnToggleExportMenu');
+  const dropdownExport = document.getElementById('dropdownExport');
+  if (btnToggleExport && dropdownExport) {
+    btnToggleExport.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdownExport.classList.toggle('open');
+      const isOpen = dropdownExport.classList.contains('open');
+      btnToggleExport.setAttribute('aria-expanded', isOpen);
+    });
 
-  document.getElementById('btnTopPrintReport').addEventListener('click', () => {
-    window.print();
-  });
+    document.addEventListener('click', (e) => {
+      if (!dropdownExport.contains(e.target)) {
+        dropdownExport.classList.remove('open');
+        btnToggleExport.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
+  // Descargas discretas
+  const btnTopMd = document.getElementById('btnTopDownloadReport');
+  if (btnTopMd) {
+    btnTopMd.addEventListener('click', () => {
+      if (dropdownExport) dropdownExport.classList.remove('open');
+      downloadReportFile();
+    });
+  }
+
+  const btnTopPdf = document.getElementById('btnTopPrintReport');
+  if (btnTopPdf) {
+    btnTopPdf.addEventListener('click', () => {
+      if (dropdownExport) dropdownExport.classList.remove('open');
+      window.print();
+    });
+  }
 }
 
 // --- VERIFICAR ESTADO API ---
@@ -184,7 +233,9 @@ async function loadDataset(forcedRubro = null, forcedFocus = null, handoffPolicy
     const selectHandoff = document.getElementById('selectHandoff');
     const rVal = forcedRubro || (currentData && currentData.meta ? currentData.meta.detected_rubro_key : '');
     const fVal = forcedFocus || (selectFocus && selectFocus.value === 'auto' ? '' : (selectFocus ? selectFocus.value : ''));
-    const hVal = handoffPolicy || (selectHandoff ? selectHandoff.value : 'hybrid');
+    const savedHandoff = localStorage.getItem('spoter_handoff_policy');
+    const hVal = handoffPolicy || savedHandoff || (selectHandoff ? selectHandoff.value : 'hybrid');
+    localStorage.setItem('spoter_handoff_policy', hVal);
 
     let url = `/api/analyze-default?handoff=${hVal}`;
     if (fVal) url += `&focus=${fVal}`;
@@ -207,6 +258,8 @@ async function loadDataset(forcedRubro = null, forcedFocus = null, handoffPolicy
       const staticRes = await fetch('./sample_data.json');
       if (staticRes.ok) {
         const data = await staticRes.json();
+        data.meta.handoff_policy = hVal;
+        if (data.handoff) data.handoff.policy = hVal;
         if (skipWizard) {
           renderAnalysis(data);
           showToast("✅ Lote de prueba cargado (Modo Estático / GitHub Pages)");
@@ -627,7 +680,8 @@ function openWizard(data) {
   // 3. Sincronizar Handoff
   const selectHandoff = document.getElementById('wizSelectHandoff');
   if (selectHandoff) {
-    selectHandoff.value = data.meta.handoff_policy || 'hybrid';
+    const savedPolicy = localStorage.getItem('spoter_handoff_policy');
+    selectHandoff.value = savedPolicy || data.meta.handoff_policy || 'hybrid';
   }
 
   // Textos auxiliares del Wizard
@@ -707,7 +761,12 @@ function initWizardEvents() {
 
   if (selectRubro) selectRubro.addEventListener('change', () => updateWizardCriteria(wizardPendingData));
   if (selectFocus) selectFocus.addEventListener('change', () => updateWizardCriteria(wizardPendingData));
-  if (selectHandoff) selectHandoff.addEventListener('change', () => updateWizardCriteria(wizardPendingData));
+  if (selectHandoff) selectHandoff.addEventListener('change', () => {
+    localStorage.setItem('spoter_handoff_policy', selectHandoff.value);
+    if (wizardPendingData && wizardPendingData.meta) wizardPendingData.meta.handoff_policy = selectHandoff.value;
+    if (wizardPendingData && wizardPendingData.handoff) wizardPendingData.handoff.policy = selectHandoff.value;
+    updateWizardCriteria(wizardPendingData);
+  });
 
   if (btnProceed) {
     btnProceed.addEventListener('click', () => {
@@ -716,6 +775,9 @@ function initWizardEvents() {
       const chosenRubro = selectRubro.value;
       const chosenFocus = selectFocus.value === 'auto' ? '' : selectFocus.value;
       const chosenHandoff = selectHandoff.value;
+      localStorage.setItem('spoter_handoff_policy', chosenHandoff);
+      wizardPendingData.meta.handoff_policy = chosenHandoff;
+      if (wizardPendingData.handoff) wizardPendingData.handoff.policy = chosenHandoff;
 
       // Ocultar wizard
       const wiz = document.getElementById('wizardSection');
@@ -769,8 +831,11 @@ function renderAnalysis(data) {
   }
 
   const selectHandoff = document.getElementById('selectHandoff');
-  if (selectHandoff && data.meta.handoff_policy) {
-    selectHandoff.value = data.meta.handoff_policy;
+  const effectiveHandoff = localStorage.getItem('spoter_handoff_policy') || data.meta.handoff_policy || 'hybrid';
+  data.meta.handoff_policy = effectiveHandoff;
+  if (data.handoff) data.handoff.policy = effectiveHandoff;
+  if (selectHandoff) {
+    selectHandoff.value = effectiveHandoff;
   }
 
   const isSales = (data.meta.business_focus === 'ventas');
@@ -1242,6 +1307,24 @@ function renderTopics(topics, isSales) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const topic = topics[ctx.dataIndex];
+              const val = ctx.parsed.y !== undefined ? ctx.parsed.y : ctx.raw;
+              if (ctx.dataset.type === 'line') {
+                return ` ${ctx.dataset.label}: ${val} msgs`;
+              }
+              const clientMsg = Number(topic.avg_client_messages || (topic.avg_messages_per_client * 0.45));
+              const opMsg = Number(topic.avg_operator_messages || (topic.avg_messages_per_client * 0.55));
+              const totalCase = (clientMsg + opMsg) || 1;
+              const pctOfCase = Math.round((Number(val) / totalCase) * 100);
+              return ` ${ctx.dataset.label}: ${val} msgs (${pctOfCase}% del caso) | Demanda: ${topic.percentage}% (${topic.count} casos)`;
+            }
+          }
+        }
+      },
       scales: {
         x: { grid: { color: 'rgba(255,255,255,0.05)' } },
         y: {
@@ -1329,7 +1412,19 @@ function renderFrictionCharts(data) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const val = ctx.parsed.y !== undefined ? ctx.parsed.y : ctx.raw;
+              const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+              const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0.0';
+              return ` Turnos Iniciales: ${val.toLocaleString()} (${pct}%)`;
+            }
+          }
+        }
+      },
       scales: {
         x: { grid: { color: 'rgba(255,255,255,0.05)' } },
         y: { grid: { color: 'rgba(255,255,255,0.05)' } }
@@ -1361,7 +1456,19 @@ function renderFrictionCharts(data) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const val = ctx.parsed.y !== undefined ? ctx.parsed.y : ctx.raw;
+              const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+              const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0.0';
+              return ` Turnos en Conversación: ${val.toLocaleString()} (${pct}%)`;
+            }
+          }
+        }
+      },
       scales: {
         x: { grid: { color: 'rgba(255,255,255,0.05)' } },
         y: { grid: { color: 'rgba(255,255,255,0.05)' } }
@@ -1386,7 +1493,19 @@ function renderFrictionCharts(data) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom' } }
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const val = ctx.parsed !== undefined ? ctx.parsed : ctx.raw;
+              const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+              const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0.0';
+              return ` ${ctx.label}: ${val.toLocaleString()} ráfagas (${pct}%)`;
+            }
+          }
+        }
+      }
     }
   });
 
@@ -1457,7 +1576,19 @@ function renderScheduleCharts(schedule) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const val = ctx.parsed.y !== undefined ? ctx.parsed.y : ctx.raw;
+              const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+              const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0.0';
+              return ` Conversaciones: ${val.toLocaleString()} (${pct}% de la semana)`;
+            }
+          }
+        }
+      },
       scales: {
         x: { grid: { color: 'rgba(255,255,255,0.05)' } },
         y: { grid: { color: 'rgba(255,255,255,0.05)' } }
@@ -1488,7 +1619,19 @@ function renderScheduleCharts(schedule) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const val = ctx.parsed.y !== undefined ? ctx.parsed.y : ctx.raw;
+              const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+              const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0.0';
+              return ` Consultas: ${val.toLocaleString()} (${pct}% del día)`;
+            }
+          }
+        }
+      },
       scales: {
         x: { grid: { color: 'rgba(255,255,255,0.05)' } },
         y: { grid: { color: 'rgba(255,255,255,0.05)' } }
@@ -1744,13 +1887,24 @@ function initSimulator() {
     updateSimulator();
   });
 
-  document.getElementById('btnExportReport').addEventListener('click', () => {
-    window.location.href = '/api/export/report';
-  });
+  const btnExpRep = document.getElementById('btnExportReport');
+  if (btnExpRep) {
+    btnExpRep.addEventListener('click', () => {
+      downloadReportFile();
+    });
+  }
 
-  document.getElementById('btnExportCanned').addEventListener('click', () => {
-    window.location.href = '/api/export/canned';
-  });
+  const btnExpCanned = document.getElementById('btnExportCanned');
+  if (btnExpCanned) {
+    btnExpCanned.addEventListener('click', () => {
+      if (currentData && currentData.master_responses) {
+        downloadBlob(JSON.stringify(currentData.master_responses, null, 2), `atajos_spoter_${(currentData.meta.company_name||'crm').toLowerCase()}.json`, 'application/json');
+        showToast("💾 Atajos exportados en JSON");
+      } else {
+        window.location.href = '/api/export/canned';
+      }
+    });
+  }
 }
 
 function updateSimulator() {
@@ -2000,4 +2154,100 @@ function renderLtvAndPrioritization(data) {
       </div>
     `;
   }
+}
+
+
+// --- ACTUALIZACIÓN DINÁMICA DE HANDOFF EN EL SCORECARD ---
+function updateScorecardHandoff(data, policy) {
+  if (!data || !data.scorecard || !data.handoff) return;
+  const h = data.handoff;
+  const pA = data.scorecard.find(s => s.pillar && s.pillar.startsWith('A'));
+  if (pA) {
+    pA.focus_context = `Handoff: ${policy.toUpperCase()}`;
+    if (policy === 'bot_priority') {
+      pA.diagnosis = `En política de Bot Autoservicio, el bot absorbe el ${h.bot_share_percentage}% de la mensajería inicial sin desbordar al personal humano.`;
+      pA.status = "ÓPTIMO";
+      pA.score = 85;
+    } else if (policy === 'human_priority') {
+      pA.diagnosis = `En política Humano Prioritario, los asesores atienden inmediatamente la demanda. Requiere distribución estricta de turnos.`;
+      pA.status = "ALERTA";
+      pA.score = 65;
+    } else {
+      pA.diagnosis = `Flujo de bienvenida híbrido: triaje automático inicial con derivación balanceada a asesores según complejidad.`;
+      pA.status = "ÓPTIMO";
+      pA.score = 75;
+    }
+  }
+
+  const pPlus = data.scorecard.find(s => s.pillar && s.pillar.startsWith('+'));
+  if (pPlus) {
+    if (policy === 'bot_priority') {
+      pPlus.focus_context = `Carga Humana (${h.human_share_percentage}%) vs Bot (${h.bot_share_percentage}%)`;
+      pPlus.diagnosis = `Con Bot Autoservicio prioritario, el ${h.bot_share_percentage}% se resuelve sin intervención humana. ${h.top_human_operator} atiende solo escalamientos complejos.`;
+      pPlus.recommendation = `Estandarizar atajos y respuestas de derivación para ${h.top_human_operator}.`;
+      pPlus.status = "ÓPTIMO";
+      pPlus.score = 80;
+    } else if (policy === 'human_priority') {
+      pPlus.focus_context = `Cuello de Botella Asesor: ${h.top_human_operator}`;
+      pPlus.diagnosis = `Entre los operadores humanos, ${h.top_human_operator} concentra el ${h.top_human_percentage_of_human}% de la atención (${(h.top_human_messages||0).toLocaleString()} msgs), generando un cuello de botella crítico.`;
+      pPlus.recommendation = `Balancear la asignación de chats para descongestionar a ${h.top_human_operator}.`;
+      pPlus.status = "CRÍTICO";
+      pPlus.score = 50;
+    } else {
+      pPlus.focus_context = `Balance de Carga y Handoff`;
+      pPlus.diagnosis = `${h.top_human_operator} concentra el ${h.top_human_percentage_of_human}% de la carga de los asesores humanos.`;
+      pPlus.recommendation = `Estandarizar atajos de respuesta rápida para ${h.top_human_operator}.`;
+      pPlus.status = "ALERTA";
+      pPlus.score = 65;
+    }
+  }
+
+  renderScorecard(data.scorecard);
+}
+
+function downloadBlob(content, filename, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function downloadReportFile() {
+  showToast("📥 Descargando informe ejecutivo (.md)...");
+  fetch('/api/export/report')
+    .then(r => {
+      if (r.ok) {
+        window.location.href = '/api/export/report';
+      } else {
+        downloadClientReportFallback(currentData);
+      }
+    })
+    .catch(() => downloadClientReportFallback(currentData));
+}
+
+function downloadClientReportFallback(data) {
+  if (!data) return;
+  const comp = data.meta.company_name || 'Empresa';
+  const md = `# Auditoría de Conversaciones WhatsApp - Spoter & ACTÚEN+
+**Empresa:** ${comp}
+**Rubro Detectado:** ${data.meta.detected_rubro}
+**Foco:** ${data.meta.business_focus === 'ventas' ? 'Ventas / Comercial' : 'Soporte / Asistencial'}
+**Política Handoff:** ${data.meta.handoff_policy.toUpperCase()}
+**Mensajes Analizados:** ${data.meta.total_rows.toLocaleString()}
+**Usuarios Atendidos:** ${data.meta.unique_clients.toLocaleString()}
+
+---
+## Resumen de Fricción y Tiempos de Respuesta
+- **Espera Promedio Inicial:** ${data.wait_times.average_minutes} min (P90: ${data.wait_times.p90_minutes} min)
+- **Consultas en Zona Fría / Crítica:** ${data.wait_times.over_warning_percentage}% (${data.wait_times.over_warning_count} turnos)
+- **Distribución de Atención:** Bot ${data.handoff.bot_share_percentage}% | Humano ${data.handoff.human_share_percentage}%
+- **Asesor más Cargado:** ${data.handoff.top_human_operator} (${data.handoff.top_human_percentage_of_human}% de la carga de operadores humanos)
+
+Generado por el Analizador Spoter ACTÚEN+.`;
+  downloadBlob(md, `auditoria_spoter_${comp.toLowerCase().replace(/\s+/g, '_')}.md`, 'text/markdown;charset=utf-8');
 }

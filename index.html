@@ -215,13 +215,21 @@
         </div>
 
         <div class="executive-actions">
-          <button class="btn btn-primary" id="btnTopDownloadReport">
-            📥 Descargar Informe (.md)
-          </button>
-          <button class="btn btn-secondary" id="btnTopPrintReport">
-            🖨️ Guardar PDF
-          </button>
-          <button class="btn btn-outline-danger" id="btnResetAnalysis" title="Cargar nuevos archivos de chat">
+          <div class="discreet-dropdown" id="dropdownExport">
+            <button class="btn btn-ghost btn-sm" id="btnToggleExportMenu" type="button" aria-expanded="false" title="Opciones de descarga y exportación">
+              <span>📥 Exportar</span>
+              <span class="dropdown-caret">▾</span>
+            </button>
+            <div class="discreet-dropdown-menu" id="menuExportOptions">
+              <button class="discreet-dropdown-item" id="btnTopDownloadReport" type="button">
+                <span>📄 Descargar Informe (.md)</span>
+              </button>
+              <button class="discreet-dropdown-item" id="btnTopPrintReport" type="button">
+                <span>🖨️ Guardar / Imprimir PDF</span>
+              </button>
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-sm btn-ghost-danger" id="btnResetAnalysis" title="Cargar nuevos archivos de chat">
             🔄 Nuevo Análisis
           </button>
         </div>
@@ -815,16 +823,21 @@
             </div>
           </div>
 
-          <div style="display: flex; gap: 14px; margin-top: 30px; flex-wrap: wrap;">
-            <button class="btn btn-primary" id="btnExportReport">
-              📄 Descargar Reporte Ejecutivo (.md)
-            </button>
-            <button class="btn btn-success" id="btnExportCanned">
-              💾 Exportar Atajos para CRM / WhatsApp (.json)
-            </button>
-            <button class="btn btn-secondary" onclick="window.print()">
-              🖨️ Imprimir / Guardar en PDF
-            </button>
+          <div class="discreet-export-panel">
+            <span class="discreet-export-label">
+              <span>💾</span> <strong>Respaldo y Utilidades:</strong> Guardá los atajos generados o el diagnóstico completo.
+            </span>
+            <div class="discreet-export-actions">
+              <button class="btn btn-ghost btn-sm" id="btnExportReport" title="Descargar informe ejecutivo en Markdown">
+                📄 Informe (.md)
+              </button>
+              <button class="btn btn-ghost btn-sm" id="btnExportCanned" title="Exportar atajos para CRM en formato JSON">
+                💾 Atajos (.json)
+              </button>
+              <button class="btn btn-ghost btn-sm" onclick="window.print()" title="Imprimir pantalla o guardar en PDF">
+                🖨️ PDF
+              </button>
+            </div>
           </div>
         </div>
       </section>
