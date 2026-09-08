@@ -1161,28 +1161,45 @@ function renderScorecard(scorecard) {
   });
 }
 
-// --- RENDERIZAR TOPICS Y TABLA DE PING-PONG (SEPARANDO CLIENTE vs OPERADOR) ---
+// --- RENDERIZAR TOPICS Y TABLA DE PING-PONG (CALIBRADO POR INDUSTRIA) ---
 function renderTopics(topics, isSales) {
   const tbody = document.getElementById('topicsTableBody');
   tbody.innerHTML = '';
 
   document.getElementById('topicsChartTitle').textContent = isSales 
-    ? 'Volumen de Consultas vs. Ping-Pong Real vs. Ideal ACTÚEN+'
-    : 'Volumen de Trámites vs. Ping-Pong Real vs. Ideal ACTÚEN+';
+    ? 'Volumen de Consultas vs. Ping-Pong Real vs. Estándar de la Industria'
+    : 'Volumen de Trámites vs. Ping-Pong Real vs. Estándar de la Industria';
+
+  const pp = (currentData && currentData.ping_pong) ? currentData.ping_pong : {};
+  const idealC = pp.ideal_client_avg || 3.5;
+  const idealOp = pp.ideal_operator_avg || 3.0;
+  const idealTotal = pp.ideal_total_avg || 6.5;
+
+  const ppClientSub = document.getElementById('ppClientSub');
+  if (ppClientSub) ppClientSub.innerHTML = `Estándar Rubro: <strong>${idealC} msgs</strong> (Consulta + Especificación)`;
+
+  const ppOpSub = document.getElementById('ppOpSub');
+  if (ppOpSub) ppOpSub.innerHTML = `Estándar Rubro: <strong>${idealOp} msgs</strong> (Respuesta Maestra + Cierre)`;
+
+  const ppTotalSub = document.getElementById('ppTotalSub');
+  if (ppTotalSub) ppTotalSub.innerHTML = `Meta Calibrada: <strong>${idealTotal} msgs</strong>`;
 
   topics.forEach(t => {
     const tr = document.createElement('tr');
     const clientMsgs = t.avg_client_messages || (t.avg_messages_per_client * 0.45).toFixed(1);
     const opMsgs = t.avg_operator_messages || (t.avg_messages_per_client * 0.55).toFixed(1);
-    const excessRate = t.ping_pong_rate || (t.avg_messages_per_client / 4.5).toFixed(1);
+    const tIdealC = t.ideal_client_messages || idealC;
+    const tIdealOp = t.ideal_operator_messages || idealOp;
+    const tIdealTotal = t.ideal_total_messages || idealTotal;
+    const excessRate = t.ping_pong_rate || (t.avg_messages_per_client / tIdealTotal).toFixed(1);
 
     tr.innerHTML = `
-      <td><strong>${t.category}</strong></td>
+      <td class="cat-cell" title="${escapeHtml(t.category)}"><strong>${escapeHtml(t.category)}</strong></td>
       <td>${t.conversations.toLocaleString()}</td>
       <td>${t.percentage}%</td>
-      <td><strong>${clientMsgs}</strong> <span style="font-size:11px;color:var(--text-muted);">(vs 2.5)</span></td>
-      <td><strong>${opMsgs}</strong> <span style="font-size:11px;color:var(--text-muted);">(vs 2.0)</span></td>
-      <td><strong>${t.avg_messages_per_client} msgs</strong></td>
+      <td><strong>${clientMsgs}</strong> <span style="font-size:10px;color:var(--text-muted);">(vs ${tIdealC})</span></td>
+      <td><strong>${opMsgs}</strong> <span style="font-size:10px;color:var(--text-muted);">(vs ${tIdealOp})</span></td>
+      <td><strong>${t.avg_messages_per_client}</strong></td>
       <td><span class="badge-tag ${parseFloat(excessRate) > 2 ? 'red' : 'yellow'}">${excessRate}x</span></td>
       <td><span class="badge-tag ${t.badge_class}">${t.ping_pong_severity}</span></td>
     `;
@@ -1210,8 +1227,8 @@ function renderTopics(topics, isSales) {
           borderRadius: 4
         },
         {
-          label: 'Estándar Ideal ACTÚEN+ (4.5 msgs)',
-          data: topics.map(() => 4.5),
+          label: `Estándar de Industria (${idealTotal} msgs)`,
+          data: topics.map(t => t.ideal_total_messages || idealTotal),
           type: 'line',
           borderColor: '#10B981',
           borderWidth: 2,
@@ -1262,6 +1279,30 @@ function renderFrictionCharts(data) {
   if (sla) {
     document.getElementById('slaDescriptionText').textContent = 
       `SLA del Rubro (${data.meta.detected_rubro}): Óptimo < ${sla.ideal_immediate} min | Aceptable < ${sla.acceptable} min | Zona Fría > ${sla.warning} min. ${sla.benchmark_text}`;
+  }
+
+  // 1. Resumen Visual: 3 Franjas Oportunas (OK) vs 2 Franjas Críticas (Riesgo/Fuga)
+  const elOkSummary = document.getElementById('valInitialOkSummary');
+  const elRiskSummary = document.getElementById('valInitialRiskSummary');
+
+  if (initData.ok_summary && elOkSummary) {
+    elOkSummary.textContent = `${initData.ok_summary.count.toLocaleString()} chats (${initData.ok_summary.percentage}%)`;
+  } else if (elOkSummary) {
+    const bKeys = Object.keys(initBrackets);
+    const okCount = (initBrackets[bKeys[0]] || 0) + (initBrackets[bKeys[1]] || 0) + (initBrackets[bKeys[2]] || 0);
+    const totalCount = initData.count || 1;
+    const okPct = Math.round((okCount / totalCount) * 1000) / 10;
+    elOkSummary.textContent = `${okCount.toLocaleString()} chats (${okPct}%)`;
+  }
+
+  if (initData.risk_summary && elRiskSummary) {
+    elRiskSummary.textContent = `${initData.risk_summary.count.toLocaleString()} chats (${initData.risk_summary.percentage}%)`;
+  } else if (elRiskSummary) {
+    const bKeys = Object.keys(initBrackets);
+    const riskCount = (initBrackets[bKeys[3]] || 0) + (initBrackets[bKeys[4]] || 0);
+    const totalCount = initData.count || 1;
+    const riskPct = Math.round((riskCount / totalCount) * 1000) / 10;
+    elRiskSummary.textContent = `${riskCount.toLocaleString()} chats (${riskPct}%)`;
   }
 
   // 1. Gráfico Lado Izquierdo: Mensaje Inicial
@@ -1541,6 +1582,16 @@ function initModalEvents() {
       }
     });
   });
+
+  // Tarjetas Interactivas de Auditoría de Capital (Tab 2)
+  document.querySelectorAll('.ltv-kpi-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const key = card.getAttribute('data-ltv-kpi');
+      if (key) {
+        openLtvExplanationModal(key);
+      }
+    });
+  });
 }
 
 function openModal(data) {
@@ -1550,6 +1601,77 @@ function openModal(data) {
   document.getElementById('modalImpact').textContent = data.impact;
   document.getElementById('modalBenchmark').textContent = data.benchmark;
   document.getElementById('explainModal').classList.add('open');
+}
+
+
+// --- MODAL EXPLICATIVO PARA TARJETAS DE AUDITORÍA DE CAPITAL LTV ---
+function openLtvExplanationModal(key) {
+  if (!currentData || !currentData.ltv_economics) return;
+  const ltv = currentData.ltv_economics;
+  const prio = currentData.prioritization_audit || {};
+  const lite = currentData.spoter_lite || {};
+  const fx = 1250;
+
+  if (key === 'capital_risk') {
+    const totalRiskUsd = ltv.total_economic_risk_usd || 0;
+    const totalRiskArs = Math.round(totalRiskUsd * fx);
+    const immLostUsd = ltv.immediate_lost_usd || 0;
+    const immLostArs = Math.round(immLostUsd * fx);
+    const cacUsd = ltv.cac_wasted_usd || 0;
+    const cacArs = Math.round(cacUsd * fx);
+    const ltvUnitUsd = ltv.ltv_usd || 0;
+    const ltvUnitArs = Math.round(ltvUnitUsd * fx);
+    const ticketUsd = ltv.avg_ticket_usd || 0;
+    const ticketArs = Math.round(ticketUsd * fx);
+
+    openModal({
+      title: `💰 Auditoría de Capital LTV en Riesgo: $${totalRiskUsd.toLocaleString()} USD (~$${totalRiskArs.toLocaleString()} ARS)`,
+      meaning: `Mide el impacto patrimonial acumulado cuando leads con intención de compra real se enfrían por demoras superiores al SLA saludable (> 15 min).\n\nLa pérdida no es solo la compra puntual de hoy, sino el ciclo de vida completo del cliente (LTV) más la inversión en pauta publicitaria (CAC) que ya no se recupera.`,
+      calculation: `• Leads calificados en Zona Fría: ${ltv.leads_at_risk_count.toLocaleString()} usuarios (${ltv.leads_at_risk_percentage}% de la cartera auditada)\n` +
+        `• Ticket Promedio del Sector: $${ticketUsd.toLocaleString()} USD ($${ticketArs.toLocaleString()} ARS)\n` +
+        `• Frecuencia & Retención: ${ltv.annual_frequency} compras/año durante ${ltv.retention_years} años ➔ LTV Unitario: $${ltvUnitUsd.toLocaleString()} USD ($${ltvUnitArs.toLocaleString()} ARS)\n` +
+        `• Pérdida Inmediata en 1ª Venta (65% caída): $${immLostUsd.toLocaleString()} USD ($${immLostArs.toLocaleString()} ARS)\n` +
+        `• Destrucción de Cartera LTV Recurrente: $${(ltv.ltv_capital_at_risk_usd || 0).toLocaleString()} USD\n` +
+        `• CAC Desperdiciado (Pauta Meta/Google): $${cacUsd.toLocaleString()} USD ($${cacArs.toLocaleString()} ARS)\n` +
+        `• Riesgo Económico Total Acumulado: $${totalRiskUsd.toLocaleString()} USD (~$${totalRiskArs.toLocaleString()} ARS)`,
+      impact: `⚡ Solución Quirúrgica Spoter:\nCon el Triage IU/IC y las Respuestas Maestras, Spoter prioriza y rescata hasta un 75% de esta cartera en riesgo, proyectando una protección patrimonial de $${(ltv.projected_recovered_ltv_usd || 0).toLocaleString()} USD (~$${Math.round((ltv.projected_recovered_ltv_usd || 0) * fx).toLocaleString()} ARS).`,
+      benchmark: `Meta Spoter: Cero leads con IC ≥ 40 demorados en Zona Fría.`
+    });
+  } else if (key === 'fifo_delayed') {
+    const fifoWait = prio.fifo_vs_spoter_wait?.fifo_high_intent_wait_min || 0;
+    const spoterWait = prio.fifo_vs_spoter_wait?.spoter_high_intent_wait_min || 2.0;
+
+    openModal({
+      title: `⚠️ Fuga por Atención FIFO: ${prio.fifo_delayed_percentage}% de Compradores Afectados`,
+      meaning: `FIFO ("First In, First Out") atiende a los usuarios estrictamente por orden de llegada. Trata exactamente igual a un saludo casual o mensaje de spam que a un cliente con especificaciones técnicas y presupuesto listo para pagar.`,
+      calculation: `• Leads con Alta Intención Comercial (IC ≥ 40): ${prio.high_intent_leads_count.toLocaleString()} usuarios detectados\n` +
+        `• Leads de compra que cayeron en Zona Fría (> 15 min): ${prio.high_intent_delayed_count.toLocaleString()} (${prio.fifo_delayed_percentage}% de los compradores)\n` +
+        `• Demora Promedio Real que sufrieron en FIFO: ${fifoWait} minutos\n` +
+        `• Demora Proyectada con Cola Priorizada Spoter: ${spoterWait} minutos (-90% de reducción)`,
+      impact: `⚡ Solución Quirúrgica Spoter:\nSpoter extrae el IC en < 3 segundos. El cliente listo para comprar salta al puesto #1 de la cola del operador con el atajo de cotización precargado, eliminando la pérdida por espera.`,
+      benchmark: `Estándar Saludable: Compradores de alta intención atendidos en < 2 minutos.`
+    });
+  } else if (key === 'meta_24h') {
+    openModal({
+      title: `⏱️ Vencimiento de Ventana de 24 Horas WhatsApp (Meta API)`,
+      meaning: `La API de WhatsApp impone una ventana estricta de 24 horas desde el último mensaje del cliente. Si la empresa tarda más de 24 horas en responder o hacer seguimiento, el canal se bloquea para texto libre y se exige el pago de plantillas publicitarias HSM.`,
+      calculation: `• Conversaciones con demora > 24 horas: ${prio.whatsapp_24h_breaches.toLocaleString()} chats (${prio.whatsapp_24h_breach_percentage}% de los casos)\n` +
+        `• Costo directo: Penalización en compra de plantillas de reactivación pagas de Meta\n` +
+        `• Costo indirecto: Pérdida total del lead (el 92% de los clientes no responde un mensaje 24 horas después)`,
+      impact: `⚡ Solución Quirúrgica Spoter:\nMonitoreo automático de la ventana de sesión con alertas preventivas al llegar a las 20 horas de inactividad para garantizar el cierre dentro de la ventana gratuita.`,
+      benchmark: `Meta: 0% de conversaciones vencidas fuera de la ventana de 24 horas.`
+    });
+  } else if (key === 'lite_rescuable') {
+    openModal({
+      title: `🟢 Leads Rescatables con Spoter Lite: ${lite.leads_rescatables_count} Oportunidades`,
+      meaning: `Leads que atravesaron las fases de indagación y presupuesto, mostraron alto interés de compra (IC ≥ 40) y, tras un silencio del cliente o del operador, la conversación quedó archivada sin ninguna acción de rescate.`,
+      calculation: `• Leads calificados abandonados en silencio: ${lite.leads_rescatables_count.toLocaleString()} (${lite.leads_rescatables_percentage}% de las oportunidades en fase de cierre)\n` +
+        `• Tasa de conversión histórica sin rescate: 0%\n` +
+        `• Tasa de recuperación con protocolo Spoter Lite: 25% a 40% de éxito en retorno de diálogo`,
+      impact: `⚡ Solución Quirúrgica Spoter:\nSpoter Lite detecta conversaciones inactivas con alto IC y propone al operador un atajo de rescate de 1 solo toque con llamada a la acción ("¿Pudiste revisar el presupuesto? ¿Te reservo la unidad?").`,
+      benchmark: `Recuperar al menos el 30% de los leads dormidos en fase de cotización.`
+    });
+  }
 }
 
 function openSavingsModal() {
@@ -1670,6 +1792,9 @@ function escapeHtml(str) {
 // ==========================================================================
 // RENDERIZADO DE LTV ECONÓMICO, PRIORIZACIÓN IU/IC Y MOTOR LITE (V2.5)
 // ==========================================================================
+let currentLtvCurrency = 'USD';
+const LTV_FX_RATE = 1250;
+
 function renderLtvAndPrioritization(data) {
   const ltv = data.ltv_economics;
   const prio = data.prioritization_audit;
@@ -1684,12 +1809,15 @@ function renderLtvAndPrioritization(data) {
   // 1. Tarjetas de Diagnóstico de Capital
   const elTotalRisk = document.getElementById('valLtvTotalRisk');
   const elSubRisk = document.getElementById('subLtvTotalRisk');
+  const fx = LTV_FX_RATE;
+
   if (elTotalRisk) {
-    const formattedUsd = `$${ltv.total_economic_risk_usd.toLocaleString()} USD`;
-    elTotalRisk.textContent = formattedUsd;
+    const totalUsd = ltv.total_economic_risk_usd || 0;
+    const totalArs = Math.round(totalUsd * fx);
+    elTotalRisk.innerHTML = `$${totalUsd.toLocaleString()} USD <span style="font-size:12px;opacity:0.85;font-weight:600;">(~$${totalArs.toLocaleString('es-AR')} ARS)</span>`;
   }
   if (elSubRisk) {
-    elSubRisk.textContent = `Pérdida inmediata: $${ltv.immediate_lost_usd.toLocaleString()} USD | CAC pauta: $${ltv.cac_wasted_usd.toLocaleString()} USD`;
+    elSubRisk.textContent = `Pérdida inmediata: $${(ltv.immediate_lost_usd || 0).toLocaleString()} USD | CAC pauta: $${(ltv.cac_wasted_usd || 0).toLocaleString()} USD`;
   }
 
   const elFifoPct = document.getElementById('valFifoDelayedPct');
@@ -1707,12 +1835,13 @@ function renderLtvAndPrioritization(data) {
   if (elLiteRescatables) elLiteRescatables.textContent = `${lite.leads_rescatables_count} leads`;
   if (elSubLite) elSubLite.textContent = `${lite.leads_rescatables_percentage}% de leads en cierre eran recuperables`;
 
-  // 2. Simulador Interactivo de LTV con Sliders
+  // 2. Simulador Interactivo de LTV con Sliders y Toggle de Moneda (USD / ARS)
   const slTicket = document.getElementById('sliderSimTicket');
   const slFreq = document.getElementById('sliderSimFreq');
   const slYears = document.getElementById('sliderSimYears');
   const slRecov = document.getElementById('sliderSimRecovery');
 
+  const lblTicket = document.getElementById('lblSimTicket');
   const dispTicket = document.getElementById('dispSimTicket');
   const dispFreq = document.getElementById('dispSimFreq');
   const dispYears = document.getElementById('dispSimYears');
@@ -1722,36 +1851,83 @@ function renderLtvAndPrioritization(data) {
   const resTotalAtRisk = document.getElementById('resSimTotalAtRisk');
   const resRecovered = document.getElementById('resSimRecovered');
 
+  const btnUsd = document.getElementById('btnCurrUsd');
+  const btnArs = document.getElementById('btnCurrArs');
+
+  function configureTicketSlider() {
+    if (!slTicket) return;
+    if (currentLtvCurrency === 'ARS') {
+      if (lblTicket) lblTicket.textContent = 'Ticket Promedio ($ ARS)';
+      slTicket.min = 25000;
+      slTicket.max = 6000000;
+      slTicket.step = 25000;
+      const baseUsd = ltv.avg_ticket_usd || 250;
+      slTicket.value = Math.round((baseUsd * fx) / 25000) * 25000;
+    } else {
+      if (lblTicket) lblTicket.textContent = 'Ticket Promedio ($ USD)';
+      slTicket.min = 20;
+      slTicket.max = 5000;
+      slTicket.step = 10;
+      slTicket.value = ltv.avg_ticket_usd || 250;
+    }
+  }
+
+  function formatMoney(amount) {
+    if (currentLtvCurrency === 'ARS') {
+      return '$' + Math.round(amount).toLocaleString('es-AR') + ' ARS';
+    }
+    return '$' + Math.round(amount).toLocaleString('en-US') + ' USD';
+  }
+
+  function updateLiveLtv() {
+    if (!slTicket) return;
+    const ticket = parseFloat(slTicket.value);
+    const freq = parseFloat(slFreq.value);
+    const years = parseFloat(slYears.value);
+    const recovPct = parseFloat(slRecov.value) / 100;
+
+    dispTicket.textContent = formatMoney(ticket);
+    dispFreq.textContent = `${freq.toFixed(1)}x`;
+    dispYears.textContent = `${years.toFixed(1)} años`;
+    dispRecov.textContent = `${Math.round(recovPct * 100)}%`;
+
+    const ltvUnit = Math.round(ticket * freq * years);
+    const leadsAtRisk = ltv.leads_at_risk_count || 1;
+    const cacUnit = (currentLtvCurrency === 'ARS') ? (ltv.cac_usd || 50) * fx : (ltv.cac_usd || 50);
+
+    // 65% de pérdida de conversión en Zona Fría
+    const totalRisk = Math.round(leadsAtRisk * ltvUnit * 0.65 + leadsAtRisk * cacUnit);
+    const recovered = Math.round(totalRisk * recovPct);
+
+    if (resLtvUnit) resLtvUnit.textContent = formatMoney(ltvUnit);
+    if (resTotalAtRisk) resTotalAtRisk.textContent = formatMoney(totalRisk);
+    if (resRecovered) resRecovered.textContent = formatMoney(recovered);
+  }
+
+  if (btnUsd && btnArs) {
+    btnUsd.onclick = () => {
+      if (currentLtvCurrency === 'USD') return;
+      currentLtvCurrency = 'USD';
+      btnUsd.classList.add('active');
+      btnArs.classList.remove('active');
+      configureTicketSlider();
+      updateLiveLtv();
+    };
+    btnArs.onclick = () => {
+      if (currentLtvCurrency === 'ARS') return;
+      currentLtvCurrency = 'ARS';
+      btnArs.classList.add('active');
+      btnUsd.classList.remove('active');
+      configureTicketSlider();
+      updateLiveLtv();
+    };
+  }
+
   if (slTicket && slFreq && slYears && slRecov) {
-    // Inicializar sliders con datos del rubro
-    slTicket.value = ltv.avg_ticket_usd || 250;
+    configureTicketSlider();
     slFreq.value = ltv.annual_frequency || 4;
     slYears.value = ltv.retention_years || 2;
     slRecov.value = 75;
-
-    function updateLiveLtv() {
-      const ticket = parseFloat(slTicket.value);
-      const freq = parseFloat(slFreq.value);
-      const years = parseFloat(slYears.value);
-      const recovPct = parseFloat(slRecov.value) / 100;
-
-      dispTicket.textContent = `$${ticket.toLocaleString()}`;
-      dispFreq.textContent = `${freq.toFixed(1)}x`;
-      dispYears.textContent = `${years.toFixed(1)} años`;
-      dispRecov.textContent = `${Math.round(recovPct * 100)}%`;
-
-      const ltvUnit = Math.round(ticket * freq * years);
-      const leadsAtRisk = ltv.leads_at_risk_count || 1;
-      const cac = ltv.cac_usd || 50;
-
-      // 65% de pérdida de conversión en Zona Fría
-      const totalRisk = Math.round(leadsAtRisk * ltvUnit * 0.65 + leadsAtRisk * cac);
-      const recovered = Math.round(totalRisk * recovPct);
-
-      if (resLtvUnit) resLtvUnit.textContent = `$${ltvUnit.toLocaleString()} USD`;
-      if (resTotalAtRisk) resTotalAtRisk.textContent = `$${totalRisk.toLocaleString()} USD`;
-      if (resRecovered) resRecovered.textContent = `$${recovered.toLocaleString()} USD`;
-    }
 
     slTicket.oninput = updateLiveLtv;
     slFreq.oninput = updateLiveLtv;

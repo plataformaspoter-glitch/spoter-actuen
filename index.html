@@ -354,13 +354,13 @@
           <span class="tab-num">4</span>
           <span class="tab-label">Fugas & Tiempos Calibrados</span>
         </button>
-        <button class="tab-btn" data-tab="tabTemplates">
-          <span class="tab-num">5</span>
-          <span class="tab-label">Respuestas Maestras</span>
-        </button>
         <button class="tab-btn" data-tab="tabSimulator">
-          <span class="tab-num">6</span>
+          <span class="tab-num">5</span>
           <span class="tab-label">Simulador de Ahorro</span>
+        </button>
+        <button class="tab-btn" data-tab="tabTemplates">
+          <span class="tab-num">6</span>
+          <span class="tab-label">Respuestas Maestras</span>
         </button>
       </nav>
 
@@ -423,17 +423,27 @@
             </div>
           </div>
 
-          <!-- Simulador Interactivo de LTV & Recuperación de ROI -->
+          <!-- Simulador Interactivo de LTV & Recuperación de ROI (Con Toggle USD / ARS) -->
           <div class="ltv-simulator-box">
-            <div class="sim-header">
-              <h4>🧮 Simulador Interactivo de LTV y Recuperación Económica Spoter</h4>
-              <span style="font-size: 11.5px; color: var(--text-muted);">Ajustá los parámetros del negocio en tiempo real</span>
+            <div class="sim-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+              <div>
+                <h4>🧮 Simulador Interactivo de LTV y Recuperación Económica Spoter</h4>
+                <span style="font-size: 11.5px; color: var(--text-muted);">Ajustá los parámetros del negocio en tiempo real</span>
+              </div>
+              <div class="currency-toggle-wrapper" style="margin-bottom: 0;">
+                <span class="currency-toggle-label">Moneda:</span>
+                <div class="currency-btn-group" id="currencyToggleGroup">
+                  <button type="button" class="btn-curr active" id="btnCurrUsd" data-curr="USD">💵 USD</button>
+                  <button type="button" class="btn-curr" id="btnCurrArs" data-curr="ARS">🇦🇷 ARS</button>
+                </div>
+                <span class="currency-fx-hint" id="currencyFxHint">Ref: 1 USD = .250 ARS</span>
+              </div>
             </div>
 
             <div class="sim-grid-controls">
               <div class="sim-control-group">
                 <div class="sim-label-row">
-                  <span class="sim-label">Ticket Promedio ($ USD)</span>
+                  <span class="sim-label" id="lblSimTicket">Ticket Promedio ($ USD)</span>
                   <span class="sim-val-display" id="dispSimTicket">$250</span>
                 </div>
                 <input type="range" class="sim-slider" id="sliderSimTicket" min="20" max="5000" step="10" value="250">
@@ -510,6 +520,17 @@
                   </div>
                 </div>
               </div>
+
+              <!-- Explicación de cómo Spoter Lite resuelve la demora -->
+              <div class="fifo-explanation-box">
+                <h5>⚡ ¿Cómo resuelve Spoter Lite este cuello de botella?</h5>
+                <p>Spoter Lite reemplaza la cola pasiva mediante un motor determinístico y triage de 3 capas:</p>
+                <ol>
+                  <li><strong>Contención Cero-Latencia (&lt; 3s):</strong> Atiende el mensaje inicial al instante, sin tiempos muertos de espera humana.</li>
+                  <li><strong>Triage Algorítmico IU / IC:</strong> Analiza vocabulario, montos y contexto para calcular si es una consulta urgente de compra o una duda general.</li>
+                  <li><strong>Cola Priorizada Anti-FIFO:</strong> Coloca al comprador caliente en el primer lugar de la bandeja del operador humano con una <em>Respuesta Maestra pre-cargada</em>, desplomando la espera de horas a menos de 2 minutos.</li>
+                </ol>
+              </div>
             </div>
 
             <div class="fifo-card">
@@ -522,6 +543,20 @@
               <div class="fifo-bars-list" id="spoterLitePhaseBars">
                 <!-- Dinámico en app.js -->
               </div>
+
+              <!-- Explicación de cómo se tomaron las fases y cómo afecta al proceso -->
+              <div class="fifo-explanation-box">
+                <h5>📊 ¿Cómo se determinaron las Fases y cómo complica el proceso comercial la falta de resolución?</h5>
+                <p>El sistema clasifica las conversaciones analizando hitos clave del diálogo:</p>
+                <ul>
+                  <li><strong>1. Gracia (&lt; 30%):</strong> Saludos de apertura y cortesía.</li>
+                  <li><strong>2. Trabajo (30%-60%):</strong> Indagación técnica, consulta de stock, medidas o aranceles.</li>
+                  <li><strong>3. Cierre / Rescate (60%-100%):</strong> Envío de cotización, negociación o confirmación.</li>
+                </ul>
+                <p style="margin-top: 6px;">
+                  ⚠️ <strong>¿Cómo complica el proceso?</strong> Cuando más del 80% de los contactos llegan a etapa de cotización pero los operadores quedan atrapados en un ping-pong de 20+ mensajes, los asesores se agotan tipeando respuestas repetitivas. Los clientes que estaban listos para comprar se enfrían por falta de un cierre guiado o rescate proactivo, perdiendo ventas frente a competidores más ágiles.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -531,14 +566,14 @@
       <!-- Pestaña 2: Top Motivos de Consulta & Ping-Pong -->
       <section class="tab-pane" id="tabTopics">
         
-        <!-- Bloque Comparativo Ejecutivo: Ping-Pong Real vs Ideal -->
+        <!-- Bloque Comparativo Ejecutivo: Ping-Pong Real vs Ideal (Calibrado por Rubro) -->
         <div class="pingpong-compare-block">
           <div class="pingpong-header">
-            <h3>🏓 Análisis Comparativo de Ping-Pong: Realidad vs. Estándar Ideal ACTÚEN+</h3>
+            <h3>🏓 Análisis Comparativo de Ping-Pong: Realidad vs. Estándar Calibrado por Industria</h3>
             <span class="pingpong-badge-excess" id="badgePingPongExcess">Factor Exceso: -</span>
           </div>
           <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
-            Mide la cantidad de mensajes intercambiados entre el interlocutor (cliente) y la empresa para resolver una consulta. Se compara contra el estándar óptimo de <strong>4.5 mensajes totales</strong> (resolución en 1 solo bloque estructurado).
+            Mide la cantidad de mensajes intercambiados para resolver cada consulta. A diferencia de un criterio rígido, <strong>el estándar ACTÚEN+ está calibrado y flexibilizado según la complejidad técnica de la industria</strong> (contempla turnos de especificación técnica antes de marcar fragmentación o exceso).
           </p>
           <div class="pingpong-cards-grid">
             <div class="pingpong-card">
@@ -569,15 +604,15 @@
           <div class="card-panel">
             <h3>Detalle Cuantitativo de Ping-Pong por Motivo de Consulta</h3>
             <div class="table-wrapper">
-              <table class="data-table">
+              <table class="data-table table-compact">
                 <thead>
                   <tr>
                     <th>Categoría</th>
-                    <th>Usuarios</th>
+                    <th>Leads</th>
                     <th>%</th>
-                    <th>Msgs Cliente</th>
-                    <th>Msgs Operador</th>
-                    <th>Total Caso</th>
+                    <th>Msgs Cli</th>
+                    <th>Msgs Op</th>
+                    <th>Total</th>
                     <th>Exceso</th>
                     <th>Semáforo</th>
                   </tr>
@@ -624,6 +659,26 @@
               <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
                 Tiempo transcurrido desde que el usuario escribe su primer mensaje hasta la primera respuesta de la empresa.
               </p>
+              <!-- Resumen visual: 3 Franjas Oportunas (OK) vs 2 Franjas Críticas (Riesgo/Fuga) -->
+              <div class="wait-summary-bar" id="initialWaitSummaryBar">
+                <div class="wait-summary-segment ok-segment">
+                  <div class="seg-icon">🟢</div>
+                  <div class="seg-info">
+                    <div class="seg-title">Atención Oportuna / Saludable (3 Franjas)</div>
+                    <div class="seg-val" id="valInitialOkSummary">-- chats (--%)</div>
+                    <div class="seg-sub">Inmediato + Aceptable + Alerta (&le; SLA)</div>
+                  </div>
+                </div>
+                <div class="wait-summary-segment risk-segment">
+                  <div class="seg-icon">🔴</div>
+                  <div class="seg-info">
+                    <div class="seg-title">Zona de Riesgo / Fuga (2 Franjas)</div>
+                    <div class="seg-val" id="valInitialRiskSummary">-- chats (--%)</div>
+                    <div class="seg-sub">❄️ Zona Fría + Crítico (&gt; 15 min)</div>
+                  </div>
+                </div>
+              </div>
+
               <div style="height: 240px;">
                 <canvas id="chartWaitTimesInitial"></canvas>
               </div>
@@ -716,24 +771,6 @@
       </section>
 
       <!-- Pestaña 4: Respuestas Maestras del Rubro -->
-      <section class="tab-pane" id="tabTemplates">
-        <div style="margin-bottom: 18px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 10px;">
-          <div>
-            <h2 style="font-family: var(--font-heading); font-size: 20px;">Plantillas Condensadas "Cero Vueltas"</h2>
-            <p style="font-size: 13px; color: var(--text-secondary);" id="templatesSubTitle">
-              Reemplazan las conversaciones desordenadas por 1 solo bloque estructurado con viñetas y llamado a la acción.
-            </p>
-          </div>
-          <button class="btn btn-secondary" id="btnToggleMoreTemplates">
-            ➕ Ver Más Plantillas del Rubro
-          </button>
-        </div>
-        <div id="templatesList">
-          <!-- Renderizado dinámico de tarjetas Antes vs Después -->
-        </div>
-      </section>
-
-      <!-- Pestaña 5: Simulador de Ahorro y Beneficio Económico -->
       <section class="tab-pane" id="tabSimulator">
         <div class="simulator-box">
           <h2 style="font-family: var(--font-heading); font-size: 22px; margin-bottom: 8px;">
@@ -788,7 +825,25 @@
         </div>
       </section>
 
-    </main>
+    <section class="tab-pane" id="tabTemplates">
+        <div style="margin-bottom: 18px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h2 style="font-family: var(--font-heading); font-size: 20px;">Plantillas Condensadas "Cero Vueltas"</h2>
+            <p style="font-size: 13px; color: var(--text-secondary);" id="templatesSubTitle">
+              Reemplazan las conversaciones desordenadas por 1 solo bloque estructurado con viñetas y llamado a la acción.
+            </p>
+          </div>
+          <button class="btn btn-secondary" id="btnToggleMoreTemplates">
+            ➕ Ver Más Plantillas del Rubro
+          </button>
+        </div>
+        <div id="templatesList">
+          <!-- Renderizado dinámico de tarjetas Antes vs Después -->
+        </div>
+      </section>
+
+      <!-- Pestaña 5: Simulador de Ahorro y Beneficio Económico -->
+      </main>
 
   </div>
 
