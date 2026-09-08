@@ -384,42 +384,46 @@
             <span class="ltv-badge-highlight" id="badgeLtvSector">Sector: -</span>
           </div>
 
-          <!-- 4 Tarjetas de Diagnóstico de Capital -->
+          <!-- 4 Tarjetas de Diagnóstico de Capital (Interactivas y Explicativas) -->
           <div class="ltv-kpi-grid">
-            <div class="ltv-kpi-card danger-card">
+            <div class="ltv-kpi-card danger-card" id="cardLtvRisk" data-ltv-kpi="capital_risk" title="Hacé clic para ver el cálculo detallado y metodología">
               <div class="ltv-card-top">
                 <span class="ltv-card-label">Capital LTV en Riesgo</span>
                 <span class="ltv-card-badge badge-risk">🔴 DESTRUCCIÓN LTV</span>
               </div>
               <div class="ltv-card-main-val" id="valLtvTotalRisk">$0 USD</div>
               <div class="ltv-card-subtext" id="subLtvTotalRisk">Pérdida inmediata: $0 + CAC: $0</div>
+              <div class="ltv-card-click-hint">🔍 Clic para ver cómo se calculó</div>
             </div>
 
-            <div class="ltv-kpi-card warning-card">
+            <div class="ltv-kpi-card warning-card" id="cardLtvFifo" data-ltv-kpi="fifo_delayed" title="Hacé clic para ver el cálculo detallado y metodología">
               <div class="ltv-card-top">
                 <span class="ltv-card-label">Fuga por Atención FIFO</span>
                 <span class="ltv-card-badge badge-fifo">⚠️ CUELLO DE BOTELLA</span>
               </div>
               <div class="ltv-card-main-val" id="valFifoDelayedPct">0%</div>
               <div class="ltv-card-subtext" id="subFifoDelayedLeads">0 leads calientes cayeron en Zona Fría</div>
+              <div class="ltv-card-click-hint">🔍 Clic para ver cómo se calculó</div>
             </div>
 
-            <div class="ltv-kpi-card warning-card">
+            <div class="ltv-kpi-card warning-card" id="cardLtvMeta24" data-ltv-kpi="meta_24h" title="Hacé clic para ver el cálculo detallado y metodología">
               <div class="ltv-card-top">
                 <span class="ltv-card-label">Fugas Ventana 24h Meta</span>
                 <span class="ltv-card-badge badge-fifo">⏱️ LÍMITE WHATSAPP</span>
               </div>
               <div class="ltv-card-main-val" id="valMeta24hBreaches">0 chats</div>
               <div class="ltv-card-subtext" id="subMeta24hBreaches">Demora &gt; 24h: exigen plantillas pagas</div>
+              <div class="ltv-card-click-hint">🔍 Clic para ver cómo se calculó</div>
             </div>
 
-            <div class="ltv-kpi-card success-card">
+            <div class="ltv-kpi-card success-card" id="cardLtvLite" data-ltv-kpi="lite_rescuable" title="Hacé clic para ver el cálculo detallado y metodología">
               <div class="ltv-card-top">
                 <span class="ltv-card-label">Leads Rescatables Lite</span>
                 <span class="ltv-card-badge badge-recov">🟢 RECUPERABLES</span>
               </div>
               <div class="ltv-card-main-val" id="valLiteRescatables">0 leads</div>
               <div class="ltv-card-subtext" id="subLiteRescatables">Leads con IC &ge; 40 abandonados sin rescate</div>
+              <div class="ltv-card-click-hint">🔍 Clic para ver cómo se calculó</div>
             </div>
           </div>
 
