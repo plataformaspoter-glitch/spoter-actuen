@@ -1,7 +1,10 @@
-# ⚡ Spoter Analizador ACTÚEN+ (Versión 2.5)
+# ⚡ Spoter Analizador ACTÚEN+ (Versión 2.6)
 ### Plataforma de Auditoría Conversacional, Diagnóstico de Fugas, Matemática del LTV y Triage Quirúrgico (IU/IC) en WhatsApp
 
-Este sistema procesa exportaciones de chats de WhatsApp (en formato CSV), calcula métricas matemáticas de fricción y tiempos de respuesta, evalúa la interacción bajo el **Método ACTÚEN+ V2.0**, detecta automáticamente el **Rubro** (11 industrias) y el **Foco de Negocio** (Ventas vs. Soporte), calibra la **Política de Handoff** (Bot vs. Asesor) y calcula el **Lifetime Value (LTV) en riesgo**, las fugas por **atención por orden de llegada (FIFO)**, las violaciones de la **ventana de 24 hs de WhatsApp (Meta)** y los leads rescatables bajo el motor determinístico **Spoter Lite (HITL)**.
+Este sistema procesa exportaciones de chats de WhatsApp (en formato CSV), calcula métricas matemáticas de fricción y tiempos de respuesta, evalúa la interacción bajo el **Método ACTÚEN+ V2.0**, detecta automáticamente el **Rubro** (11 industrias) y el **Foco de Negocio** (Ventas vs. Soporte), calibra la **Política de Handoff** (Bot vs. Asesor) y calcula el **Lifetime Value (LTV) en riesgo** (con soporte en USD y ARS), las fugas por **atención por orden de llegada (FIFO)**, las violaciones de la **ventana de 24 hs de WhatsApp (Meta)** y los leads rescatables bajo el motor determinístico **Spoter Lite (HITL)**.
+
+**🚀 Demo Online en Vivo:** [https://plataformaspoter-glitch.github.io/spoter-actuen/](https://plataformaspoter-glitch.github.io/spoter-actuen/)
+*(Disponible también el Manual de Ventas v2.0 en: [https://plataformaspoter-glitch.github.io/spoter-actuen/manual_ventas.html](https://plataformaspoter-glitch.github.io/spoter-actuen/manual_ventas.html))*
 
 ---
 
