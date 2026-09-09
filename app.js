@@ -807,7 +807,7 @@ function runClientSideAnalysis(rows, forcedFocus = null, handoffPolicy = null, f
       before: "Silencio o 'Hola pudiste ver el PDF?' (tasa de respuesta < 10%).",
       after: "👋 ¡Hola {NOMBRE}! ¿Cómo estás? Te escribo porque estamos coordinando la hoja de ruta de entregas para tu zona ({ZONA/BARRIO}).\n\nQueríamos consultarte si vas a confirmar el pedido del Presupuesto N° {NRO_COTIZACION} para reservarte el camión y sostenerte la bonificación especial de contado.\n\n[---saltomensaje---]\n\n👉 *¿Te guardamos el lugar de entrega para esta semana o precisás hacer algún ajuste en los materiales?*",
       tipping_point: "¿Te guardamos el lugar de entrega para esta semana o precisás algún ajuste?",
-      key_benefit": "Reactivación contextual que ofrece valor logístico en lugar de presionar."
+      key_benefit: "Reactivación contextual que ofrece valor logístico en lugar de presionar."
     }
   ];
 
