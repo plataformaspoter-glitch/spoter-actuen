@@ -2581,3 +2581,70 @@ input[type="range"] {
   color: #fff;
   transform: translateY(-1px);
 }
+
+/* WhatsApp Message Split / SaltoMensaje */
+.split-bubble-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.bubble-sub-msg {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-family: var(--font-main);
+  line-height: 1.6;
+  border: 1px solid var(--border-color);
+  position: relative;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.bubble-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--spoter-pink);
+  background: var(--spoter-pink-light);
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.bubble-text {
+  white-space: pre-wrap;
+  font-size: 13.5px;
+}
+
+.split-message-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 4px 0;
+  padding: 6px 12px;
+  background: rgba(100, 116, 139, 0.08);
+  border: 1px dashed var(--border-color);
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.split-message-divider .split-icon {
+  font-size: 13px;
+}
+
+.split-message-divider .split-code {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-weight: 600;
+  color: var(--spoter-pink);
+}

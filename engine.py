@@ -340,9 +340,12 @@ class ActuenAnalyzer:
             msg_text = r.get('Mensaje', '')
             
             if propio:
-                company_msgs_count += 1
+                # Soporte para atajo de división nativa en Spoter [---saltomensaje---] o similar
+                split_parts = [p for p in re.split(r'\s*\[?-*salto[-_]?mensaje-*\]?\s*', msg_text, flags=re.IGNORECASE) if p.strip()] if msg_text else []
+                effective_count = max(1, len(split_parts)) if msg_text else 1
+                company_msgs_count += effective_count
                 op = r.get('Nombre Operador', '').strip() or 'Bot / Sistema'
-                operator_counts[op] += 1
+                operator_counts[op] += effective_count
                 client_id = r.get('Destinatario', '').strip()
                 if '?' in msg_text and len(msg_text) < 80:
                     company_question_samples.append(msg_text.strip())
@@ -461,13 +464,15 @@ class ActuenAnalyzer:
             else:
                 final_focus = rubro_info.get('default_focus', 'ventas')
 
-        # 6. Ráfagas y Fragmentación
+        # 6. Ráfagas y Fragmentación (considera divisiones por [---saltomensaje---])
         burst_sizes = []
         for cid, msgs in client_conversations.items():
             cur_burst = 0
             for m in msgs:
                 if m.get('Propio', '').strip().lower() == 'si':
-                    cur_burst += 1
+                    txt = m.get('Mensaje', '')
+                    sub_msgs = [p for p in re.split(r'\s*\[?-*salto[-_]?mensaje-*\]?\s*', txt, flags=re.IGNORECASE) if p.strip()] if txt else []
+                    cur_burst += max(1, len(sub_msgs))
                 else:
                     if cur_burst > 0:
                         burst_sizes.append(cur_burst)
@@ -1252,7 +1257,7 @@ class ActuenAnalyzer:
                     "shortcut": "/coti",
                     "category": "Ventas / Materiales",
                     "before": "Buenos días -> 'en breve enviamos' -> PDF mudo -> medios de pago -> silencio (7 msgs).",
-                    "after": "👋 ¡Hola! Te adjunto el presupuesto detallado (*Presupuesto N° {NRO_COTIZACION}*).\n\n📋 *Resumen de tu pedido:*\n• *Total de Lista / Tarjetas:* ${TOTAL_LISTA}\n• 💡 *Con 7% OFF (Efectivo / Transferencia / Débito):* *${TOTAL_DESCUENTO}*\n• *Disponibilidad:* Todo en stock para despacho inmediato.\n• *Flete:* Cotizado para {ZONA/LOCALIDAD}.\n\n⏱️ _Precios congelados por 48 horas._\n\n👉 *¿Querés que te reservemos los materiales para programar el camión para esta semana?*",
+                    "after": "👋 ¡Hola! Te adjunto el presupuesto detallado (*Presupuesto N° {NRO_COTIZACION}*).\n\n📋 *Resumen de tu pedido:*\n• *Total de Lista / Tarjetas:* ${TOTAL_LISTA}\n• 💡 *Con 7% OFF (Efectivo / Transferencia / Débito):* *${TOTAL_DESCUENTO}*\n• *Disponibilidad:* Todo en stock para despacho inmediato.\n• *Flete:* Cotizado para {ZONA/LOCALIDAD}.\n\n⏱️ _Precios congelados por 48 horas._\n\n[---saltomensaje---]\n\n👉 *¿Querés que te reservemos los materiales para programar el camión para esta semana?*",
                     "tipping_point": "¿Querés que te reservemos los materiales para programar el camión para esta semana?",
                     "key_benefit": "Resume el precio en el chat, destaca el descuento contado y cierra con reserva."
                 },
@@ -1262,7 +1267,7 @@ class ActuenAnalyzer:
                     "shortcut": "/aridos",
                     "category": "Áridos",
                     "before": "'arena comun o anchoris?' -> 'cuantos metros?' -> 'a que direccion?' (8 msgs).",
-                    "after": "¡Hola! Contamos con stock de áridos tanto por m³ como por camionada:\n\n🏗️ *Opciones disponibles:*\n• *Arena Común:* ${PRECIO_COMUN}/m³ _(Revoque grueso y contrapisos)_\n• *Arena Anchoris (Lavada):* ${PRECIO_ANCHORIS}/m³ _(Fino y pegado de cerámicos)_\n• *Ripio / Piedra Bola:* ${PRECIO_RIPIO}/m³\n💡 *7% de descuento abonando en efectivo o transferencia.*\n\n👉 *Decime cuántos metros aproximados necesitás y en qué zona está la obra para pasarte el valor final puesto en tu puerta.*",
+                    "after": "¡Hola! Contamos con stock de áridos tanto por m³ como por camionada:\n\n🏗️ *Opciones disponibles:*\n• *Arena Común:* ${PRECIO_COMUN}/m³ _(Revoque grueso y contrapisos)_\n• *Arena Anchoris (Lavada):* ${PRECIO_ANCHORIS}/m³ _(Fino y pegado de cerámicos)_\n• *Ripio / Piedra Bola:* ${PRECIO_RIPIO}/m³\n💡 *7% de descuento abonando en efectivo o transferencia.*\n\n[---saltomensaje---]\n\n👉 *Decime cuántos metros aproximados necesitás y en qué zona está la obra para pasarte el valor final puesto en tu puerta.*",
                     "tipping_point": "Decime cuántos metros necesitás y en qué zona está la obra para cotizar flete.",
                     "key_benefit": "Resuelve la duda común vs Anchoris en 1 turno."
                 },

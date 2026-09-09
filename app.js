@@ -1641,7 +1641,35 @@ function renderScheduleCharts(schedule) {
   });
 }
 
-// --- RENDERIZAR PLANTILLAS MAESTRAS CON SOPORTE "VER MÁS" ---
+// --- RENDERIZAR PLANTILLAS MAESTRAS CON SOPORTE "VER MÁS" Y SALTO MENSAJE ---
+function formatMessageWithSplits(text) {
+  if (!text) return '';
+  const splitRegex = /\s*\[?-*salto[-_]?mensaje-*\]?\s*/i;
+  if (!splitRegex.test(text)) {
+    return `<div class="message-box">${escapeHtml(text)}</div>`;
+  }
+  const parts = text.split(splitRegex).filter(p => p && p.trim());
+  if (parts.length <= 1) {
+    return `<div class="message-box">${escapeHtml(text)}</div>`;
+  }
+
+  const bubblesHtml = parts.map((part, i) => `
+    <div class="bubble-sub-msg">
+      <div class="bubble-tag">💬 Burbuja ${i + 1} de WhatsApp</div>
+      <div class="bubble-text">${escapeHtml(part.trim())}</div>
+    </div>
+  `).join(`
+    <div class="split-message-divider">
+      <span class="split-icon">✂️</span>
+      <span>Atajo de División Spoter:</span>
+      <code class="split-code">[---saltomensaje---]</code>
+      <span style="opacity:0.85;">(Entrega 2 burbujas separadas en 1 solo envío)</span>
+    </div>
+  `);
+
+  return `<div class="split-bubble-container">${bubblesHtml}</div>`;
+}
+
 function renderTemplates(templates, isSales) {
   const container = document.getElementById('templatesList');
   container.innerHTML = '';
@@ -1675,7 +1703,7 @@ function renderTemplates(templates, isSales) {
         </div>
         <div class="block-after">
           <h4>✅ Mensaje Maestro ACTÚEN+ (Cero Vueltas)</h4>
-          <div class="message-box">${escapeHtml(t.after)}</div>
+          ${formatMessageWithSplits(t.after)}
           <div class="tipping-badge">🎯 ${isSales ? 'Tipping Point' : 'Acción de Cierre'}: ${escapeHtml(t.tipping_point)}</div>
         </div>
       </div>

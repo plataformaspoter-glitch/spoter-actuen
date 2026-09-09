@@ -38,6 +38,7 @@ La mayoría de los dueños de negocios, gerentes comerciales y directores de mar
    * El 78% de los leads que consultan por WhatsApp compran al primer competidor que les responde de forma clara. Si un asesor tarda 20, 30 o 45 minutos en atender, el dinero invertido en pauta publicitaria se arrojó a la basura.
 2. **Fragmentación Desordenada (Cero Vueltas violado):**
    * El operador envía 4 a 6 mensajes separados: *"Hola"*, *"¿Cómo estás?"*, *"¿De qué zona sos?"*, *"Te paso precio"*, *"Pero no incluye flete"*. Esto satura al cliente, genera fricción cognitiva y triplica la carga del asesor.
+   * 💡 **Solución Spoter con Atajo Nativo `[---saltomensaje---]`:** Cuando una respuesta estratégica requiere dividirse en dos burbujas consecutivas (ej: Burbuja 1 con cotización y beneficios, y Burbuja 2 con la pregunta de cierre o Tipping Point), Spoter permite insertar el delimitador `[---saltomensaje---]` (o `[SaltoMensaje]`). El asesor redacta o selecciona 1 sola plantilla en 1 turno, y el motor de Spoter despacha automáticamente las dos burbujas secuenciales en WhatsApp sin requerir doble tipeo ni fragmentación manual desordenada.
 3. **El Ping-Pong Especulativo (8 a 16 mensajes por venta):**
    * Se necesitan 10 idas y vueltas para concretar un dato que podría resolverse en 2 turnos con la Regla del Bloque Único.
 4. **El Cuello de Botella FIFO (Atención por Orden de Llegada):**
@@ -105,7 +106,7 @@ Para derribar la resistencia inicial, Spoter no empieza intentando vender una su
 ```
 
 * **A - Atraer y Atender:** Filtro inteligente sin fricción. Elimina laberintos de opciones donde el 40% de los usuarios abandona. Conecta en el acto.
-* **C - Cero Vueltas:** Regla del Bloque Único. Envía cotización, detalles, flete y acción en 1 solo mensaje estructurado, eliminando ráfagas.
+* **C - Cero Vueltas:** Regla del Bloque Único. Envía cotización, detalles, flete y acción en 1 solo mensaje estructurado, eliminando ráfagas. Si la estrategia requiere dividir en dos burbujas (información + cierre), se usa el atajo `[---saltomensaje---]` para que Spoter las despache secuencialmente en 1 solo turno.
 * **T - Tiempos Aceitados:** Blindaje anti Zona Fría. El primer contacto se responde en < 2 minutos inyectando oxígeno conversacional.
 * **U - Ubicar la Intención:** Mide la temperatura real de compra con el **Índice de Conversión (IC)**, capturando necesidades completas en el mismo turno.
 * **E - Experiencia Personalizada:** Implementa el **Protocolo de Rescate Spoter Lite**, reactivando presupuestos fríos con preguntas contextuales.

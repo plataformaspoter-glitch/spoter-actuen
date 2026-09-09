@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generated_at": "2026-09-08T19:13:13.587135",
+    "generated_at": "2026-09-09T09:38:17.845760",
     "company_name": "Corralón Luján",
     "company_number": "5492613384264",
     "detected_rubro": "Construcción / Corralón / Materiales",
@@ -674,7 +674,7 @@
       "shortcut": "/coti",
       "category": "Ventas / Materiales",
       "before": "Buenos días -> 'en breve enviamos' -> PDF mudo -> medios de pago -> silencio (7 msgs).",
-      "after": "👋 ¡Hola! Te adjunto el presupuesto detallado (*Presupuesto N° {NRO_COTIZACION}*).\n\n📋 *Resumen de tu pedido:*\n• *Total de Lista / Tarjetas:* ${TOTAL_LISTA}\n• 💡 *Con 7% OFF (Efectivo / Transferencia / Débito):* *${TOTAL_DESCUENTO}*\n• *Disponibilidad:* Todo en stock para despacho inmediato.\n• *Flete:* Cotizado para {ZONA/LOCALIDAD}.\n\n⏱️ _Precios congelados por 48 horas._\n\n👉 *¿Querés que te reservemos los materiales para programar el camión para esta semana?*",
+      "after": "👋 ¡Hola! Te adjunto el presupuesto detallado (*Presupuesto N° {NRO_COTIZACION}*).\n\n📋 *Resumen de tu pedido:*\n• *Total de Lista / Tarjetas:* ${TOTAL_LISTA}\n• 💡 *Con 7% OFF (Efectivo / Transferencia / Débito):* *${TOTAL_DESCUENTO}*\n• *Disponibilidad:* Todo en stock para despacho inmediato.\n• *Flete:* Cotizado para {ZONA/LOCALIDAD}.\n\n⏱️ _Precios congelados por 48 horas._\n\n[---saltomensaje---]\n\n👉 *¿Querés que te reservemos los materiales para programar el camión para esta semana?*",
       "tipping_point": "¿Querés que te reservemos los materiales para programar el camión para esta semana?",
       "key_benefit": "Resume el precio en el chat, destaca el descuento contado y cierra con reserva."
     },
@@ -684,7 +684,7 @@
       "shortcut": "/aridos",
       "category": "Áridos",
       "before": "'arena comun o anchoris?' -> 'cuantos metros?' -> 'a que direccion?' (8 msgs).",
-      "after": "¡Hola! Contamos con stock de áridos tanto por m³ como por camionada:\n\n🏗️ *Opciones disponibles:*\n• *Arena Común:* ${PRECIO_COMUN}/m³ _(Revoque grueso y contrapisos)_\n• *Arena Anchoris (Lavada):* ${PRECIO_ANCHORIS}/m³ _(Fino y pegado de cerámicos)_\n• *Ripio / Piedra Bola:* ${PRECIO_RIPIO}/m³\n💡 *7% de descuento abonando en efectivo o transferencia.*\n\n👉 *Decime cuántos metros aproximados necesitás y en qué zona está la obra para pasarte el valor final puesto en tu puerta.*",
+      "after": "¡Hola! Contamos con stock de áridos tanto por m³ como por camionada:\n\n🏗️ *Opciones disponibles:*\n• *Arena Común:* ${PRECIO_COMUN}/m³ _(Revoque grueso y contrapisos)_\n• *Arena Anchoris (Lavada):* ${PRECIO_ANCHORIS}/m³ _(Fino y pegado de cerámicos)_\n• *Ripio / Piedra Bola:* ${PRECIO_RIPIO}/m³\n💡 *7% de descuento abonando en efectivo o transferencia.*\n\n[---saltomensaje---]\n\n👉 *Decime cuántos metros aproximados necesitás y en qué zona está la obra para pasarte el valor final puesto en tu puerta.*",
       "tipping_point": "Decime cuántos metros necesitás y en qué zona está la obra para cotizar flete.",
       "key_benefit": "Resuelve la duda común vs Anchoris en 1 turno."
     },
