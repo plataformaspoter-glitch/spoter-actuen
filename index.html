@@ -358,17 +358,21 @@
           <span class="tab-num">3</span>
           <span class="tab-label">Demanda & Ping-Pong</span>
         </button>
-        <button class="tab-btn" data-tab="tabFriction">
+        <button class="tab-btn" data-tab="tabHandoffGaps">
           <span class="tab-num">4</span>
-          <span class="tab-label">Fugas & Tiempos Calibrados</span>
+          <span class="tab-label">🔬 Motivos de Handoff</span>
         </button>
-        <button class="tab-btn" data-tab="tabSimulator">
+        <button class="tab-btn" data-tab="tabFriction">
           <span class="tab-num">5</span>
-          <span class="tab-label">Simulador de Ahorro</span>
+          <span class="tab-label">Tiempos & SLA</span>
         </button>
         <button class="tab-btn" data-tab="tabTemplates">
           <span class="tab-num">6</span>
           <span class="tab-label">Respuestas Maestras</span>
+        </button>
+        <button class="tab-btn" data-tab="tabSimulator">
+          <span class="tab-num">7</span>
+          <span class="tab-label">Simulador de Ahorro</span>
         </button>
       </nav>
 
@@ -639,7 +643,73 @@
       </section>
 
       <!-- Pestaña 3: Fugas Operativas, Tiempos y Horarios -->
-      <section class="tab-pane" id="tabFriction">
+            <!-- Pestaña 4: Diagnóstico Causal & Motivos de Handoff -->
+      <section class="tab-pane" id="tabHandoffGaps">
+<!-- AUDITORÍA DE BRECHAS DE AUTOMATIZACIÓN & DISPARADORES DE HANDOFF -->
+        <div class="card-panel gap-audit-panel" id="handoffGapPanel" style="margin-top: 20px;">
+          <div class="gap-audit-header">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span class="badge badge-accent">🔬 DIAGNÓSTICO CAUSAL</span>
+                <h3 style="margin: 0; font-size: 18px; font-family: var(--font-heading);">
+                  Brechas de Automatización: ¿Por qué intervienen los Asesores?
+                </h3>
+              </div>
+              <p style="font-size: 13px; color: var(--text-secondary); margin-top: 6px; margin-bottom: 0;">
+                Auditoría semántica de las dudas, consultas u objetivos que forzaron la intervención humana o el abandono del bot.
+              </p>
+            </div>
+            <span class="status-badge alert" id="badgeGapSummary">Fuga de Automatización Detectada</span>
+          </div>
+
+          <!-- Métricas Resumen de Brechas -->
+          <div class="gap-metrics-grid">
+            <div class="gap-metric-card">
+              <div class="gap-metric-title">Total Handoffs a Humanos</div>
+              <div class="gap-metric-val" id="valGapTotalHandoffs">-</div>
+              <div class="gap-metric-sub">Conversaciones atendidas por personas</div>
+            </div>
+            <div class="gap-metric-card alert">
+              <div class="gap-metric-title">⚠️ Derivaciones Evitables</div>
+              <div class="gap-metric-val" id="valGapAvoidablePct">-</div>
+              <div class="gap-metric-sub" id="valGapAvoidableCount">-</div>
+            </div>
+            <div class="gap-metric-card success">
+              <div class="gap-metric-title">⏱️ Horas Recuperables con Spoter</div>
+              <div class="gap-metric-val" id="valGapRecoverableHours">-</div>
+              <div class="gap-metric-sub">Tipeo manual evitable por mes</div>
+            </div>
+          </div>
+
+          <!-- Barra Comparativa Visual: Evitables vs Venta Consultiva -->
+          <div class="gap-bar-container">
+            <div class="gap-bar-header">
+              <span>Distribución Causal de las Intervenciones Humanas:</span>
+              <span id="txtGapRatioLabel">Calculando proporción...</span>
+            </div>
+            <div class="gap-bar-track">
+              <div class="gap-bar-fill avoidable" id="barGapAvoidable" style="width: 80%;" title="Derivaciones Evitables (Preguntas Estándar)"></div>
+              <div class="gap-bar-fill consultative" id="barGapConsultative" style="width: 20%;" title="Venta Consultiva Genuina (Asesor)"></div>
+            </div>
+            <div class="gap-bar-legend">
+              <span><strong style="color: #ef4444;">■</strong> Preguntas Estándar (Re-automatizables con RAG / Atajos)</span>
+              <span><strong style="color: #10b981;">■</strong> Venta Consultiva Genuina (Requiere Asesor Humano + Copiloto HITL)</span>
+            </div>
+          </div>
+
+          <!-- Lista de Disparadores de Handoff -->
+          <div style="margin-top: 24px;">
+            <h4 style="font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+              <span>🎯</span> Ranking de Dudas y Objetivos que sacaron a los Asesores a la cancha:
+            </h4>
+            <div class="gap-triggers-list" id="gapTriggersList">
+              <!-- Renderizado dinámico desde app.js -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+<section class="tab-pane" id="tabFriction">
         
         <!-- Explicación de Zona Fría (Zona Azul) -->
         <div class="info-callout" style="border-left: 4px solid #3b82f6; background: rgba(59, 130, 246, 0.07); margin-bottom: 24px;">
@@ -755,69 +825,6 @@
           </div>
         </div>
 
-        <!-- AUDITORÍA DE BRECHAS DE AUTOMATIZACIÓN & DISPARADORES DE HANDOFF -->
-        <div class="card-panel gap-audit-panel" id="handoffGapPanel" style="margin-top: 20px;">
-          <div class="gap-audit-header">
-            <div>
-              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                <span class="badge badge-accent">🔬 DIAGNÓSTICO CAUSAL</span>
-                <h3 style="margin: 0; font-size: 18px; font-family: var(--font-heading);">
-                  Brechas de Automatización: ¿Por qué intervienen los Asesores?
-                </h3>
-              </div>
-              <p style="font-size: 13px; color: var(--text-secondary); margin-top: 6px; margin-bottom: 0;">
-                Auditoría semántica de las dudas, consultas u objetivos que forzaron la intervención humana o el abandono del bot.
-              </p>
-            </div>
-            <span class="status-badge alert" id="badgeGapSummary">Fuga de Automatización Detectada</span>
-          </div>
-
-          <!-- Métricas Resumen de Brechas -->
-          <div class="gap-metrics-grid">
-            <div class="gap-metric-card">
-              <div class="gap-metric-title">Total Handoffs a Humanos</div>
-              <div class="gap-metric-val" id="valGapTotalHandoffs">-</div>
-              <div class="gap-metric-sub">Conversaciones atendidas por personas</div>
-            </div>
-            <div class="gap-metric-card alert">
-              <div class="gap-metric-title">⚠️ Derivaciones Evitables</div>
-              <div class="gap-metric-val" id="valGapAvoidablePct">-</div>
-              <div class="gap-metric-sub" id="valGapAvoidableCount">-</div>
-            </div>
-            <div class="gap-metric-card success">
-              <div class="gap-metric-title">⏱️ Horas Recuperables con Spoter</div>
-              <div class="gap-metric-val" id="valGapRecoverableHours">-</div>
-              <div class="gap-metric-sub">Tipeo manual evitable por mes</div>
-            </div>
-          </div>
-
-          <!-- Barra Comparativa Visual: Evitables vs Venta Consultiva -->
-          <div class="gap-bar-container">
-            <div class="gap-bar-header">
-              <span>Distribución Causal de las Intervenciones Humanas:</span>
-              <span id="txtGapRatioLabel">Calculando proporción...</span>
-            </div>
-            <div class="gap-bar-track">
-              <div class="gap-bar-fill avoidable" id="barGapAvoidable" style="width: 80%;" title="Derivaciones Evitables (Preguntas Estándar)"></div>
-              <div class="gap-bar-fill consultative" id="barGapConsultative" style="width: 20%;" title="Venta Consultiva Genuina (Asesor)"></div>
-            </div>
-            <div class="gap-bar-legend">
-              <span><strong style="color: #ef4444;">■</strong> Preguntas Estándar (Re-automatizables con RAG / Atajos)</span>
-              <span><strong style="color: #10b981;">■</strong> Venta Consultiva Genuina (Requiere Asesor Humano + Copiloto HITL)</span>
-            </div>
-          </div>
-
-          <!-- Lista de Disparadores de Handoff -->
-          <div style="margin-top: 24px;">
-            <h4 style="font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-              <span>🎯</span> Ranking de Dudas y Objetivos que sacaron a los Asesores a la cancha:
-            </h4>
-            <div class="gap-triggers-list" id="gapTriggersList">
-              <!-- Renderizado dinámico desde app.js -->
-            </div>
-          </div>
-        </div>
-
         <div class="card-panel">
           <h3>Métricas Críticas de Tiempos de Respuesta</h3>
           <div class="kpi-grid" style="margin-top: 15px; margin-bottom: 0;">
@@ -846,6 +853,23 @@
       </section>
 
       <!-- Pestaña 4: Respuestas Maestras del Rubro -->
+      <section class="tab-pane" id="tabTemplates">
+        <div style="margin-bottom: 18px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h2 style="font-family: var(--font-heading); font-size: 20px;">Plantillas Condensadas "Cero Vueltas"</h2>
+            <p style="font-size: 13px; color: var(--text-secondary);" id="templatesSubTitle">
+              Reemplazan las conversaciones desordenadas por 1 solo bloque estructurado con viñetas y llamado a la acción.
+            </p>
+          </div>
+          <button class="btn btn-secondary" id="btnToggleMoreTemplates">
+            ➕ Ver Más Plantillas del Rubro
+          </button>
+        </div>
+        <div id="templatesList">
+          <!-- Renderizado dinámico de tarjetas Antes vs Después -->
+        </div>
+      </section>
+
       <section class="tab-pane" id="tabSimulator">
         <div class="simulator-box">
           <h2 style="font-family: var(--font-heading); font-size: 22px; margin-bottom: 8px;">
@@ -902,23 +926,6 @@
               </button>
             </div>
           </div>
-        </div>
-      </section>
-
-    <section class="tab-pane" id="tabTemplates">
-        <div style="margin-bottom: 18px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 10px;">
-          <div>
-            <h2 style="font-family: var(--font-heading); font-size: 20px;">Plantillas Condensadas "Cero Vueltas"</h2>
-            <p style="font-size: 13px; color: var(--text-secondary);" id="templatesSubTitle">
-              Reemplazan las conversaciones desordenadas por 1 solo bloque estructurado con viñetas y llamado a la acción.
-            </p>
-          </div>
-          <button class="btn btn-secondary" id="btnToggleMoreTemplates">
-            ➕ Ver Más Plantillas del Rubro
-          </button>
-        </div>
-        <div id="templatesList">
-          <!-- Renderizado dinámico de tarjetas Antes vs Después -->
         </div>
       </section>
 

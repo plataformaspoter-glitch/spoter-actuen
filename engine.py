@@ -1183,73 +1183,10 @@ class ActuenAnalyzer:
         return scorecard
 
     def _get_rubro_templates(self, rubro_key, focus):
-        # 1. SALUD / OBRA SOCIAL (Catálogo Completo de 6 Plantillas)
-        if rubro_key == 'salud_obra_social':
-            return [
-                {
-                    "id": "autorizaciones",
-                    "title": "Gestión de Autorizaciones y Estudios Médicos",
-                    "shortcut": "/autorizar",
-                    "category": "Trámites Médicos",
-                    "before": "Hola -> 'pasame foto' -> 'falta el diagnóstico' -> 'número de afiliado?' (5 mensajes).",
-                    "after": "👋 ¡Hola! Te ayudamos a gestionar tu autorización médica en este mismo mensaje:\n\n📋 *Por favor envianos en un solo envío:*\n1. Foto clara de la orden médica (con diagnóstico, fecha y firma visible).\n2. Número de DNI o Credencial del afiliado/a:\n3. Lugar o clínica donde realizarás la práctica:\n\n⏱️ *Tiempo estimado de resolución:* 24 a 48 hs hábiles.\n\n👉 *Apenas nos envíes estos datos ingresamos tu solicitud a auditoría médica para su aprobación.*",
-                    "tipping_point": "Apenas nos envíes la foto y los 3 datos ingresamos la solicitud a auditoría médica.",
-                    "key_benefit": "Elimina el ping-pong pidiendo los requisitos de validación médica en un solo bloque."
-                },
-                {
-                    "id": "turnos",
-                    "title": "Solicitud de Turnos y Cartilla Médica",
-                    "shortcut": "/turnos",
-                    "category": "Cartilla / Turnos",
-                    "before": "'Quiero turno' -> 'para qué médico?' -> 'qué zona?' -> 'qué día podés?' (6 mensajes).",
-                    "after": "¡Hola! Con gusto coordinamos tu turno o te brindamos los profesionales disponibles en cartilla:\n\n🩺 *Para asignarte la mejor opción, respondenos en este mensaje:*\n• Especialidad o médico requerido:\n• Zona o localidad de preferencia:\n• Días u horarios en los que podés asistir:\n• DNI o N° de Afiliado:\n\n👉 *Con estos datos te enviamos las próximas fechas disponibles de inmediato.*",
-                    "tipping_point": "Con estos datos te enviamos las opciones disponibles para reservar tu turno.",
-                    "key_benefit": "Reúne especialidad, zona y disponibilidad del paciente en 1 turno."
-                },
-                {
-                    "id": "reintegros",
-                    "title": "Reintegros y Facturación Médica",
-                    "shortcut": "/reintegro",
-                    "category": "Facturación",
-                    "before": "Factura suelta -> 'de quién es?' -> 'pasame CBU' -> 'falta orden' (4 mensajes).",
-                    "after": "🎯 *Para procesar tu reintegro médico de forma directa:*\n\n📝 *Envianos en un solo mensaje:*\n1. Factura oficial (con CUIT del profesional o clínica).\n2. Orden médica o pedido de estudio que originó el gasto.\n3. CBU o Alias bancario del titular para el depósito.\n4. Nombre completo y DNI del afiliado:\n\n👉 *¿Contás con esta documentación a mano para cargar el expediente hoy mismo?*",
-                    "tipping_point": "¿Contás con esta documentación a mano para cargar el expediente hoy mismo?",
-                    "key_benefit": "Evita rechazos de reintegro por documentación incompleta."
-                },
-                {
-                    "id": "recetas_farmacia",
-                    "title": "Recetas Electrónicas y Cobertura de Farmacia",
-                    "shortcut": "/receta",
-                    "category": "Farmacia",
-                    "before": "'No me pasa la receta' -> 'qué farmacia?' -> 'qué remedio es?' (5 msgs).",
-                    "after": "👋 ¡Hola! Te asistimos con la validación de tu receta de medicamentos:\n\n💊 *Por favor envianos:*\n1. Foto de la receta o prescripción digital:\n2. Número de credencial de afiliado/a:\n3. Farmacia donde estás realizando la compra (Nombre y localidad):\n\n👉 *Validamos la cobertura en el sistema y te confirmamos en este mismo chat.*",
-                    "tipping_point": "Validamos la cobertura en el sistema y te confirmamos en este mismo chat.",
-                    "key_benefit": "Resuelve la autorización de farmacia en caliente sin idas y vueltas."
-                },
-                {
-                    "id": "credencial_digital",
-                    "title": "Descarga de Credencial Digital y Carnet",
-                    "shortcut": "/credencial",
-                    "category": "Afiliaciones",
-                    "before": "Cliente pide carnet -> asesor envía links rotos -> pide datos de nuevo.",
-                    "after": "📱 *¡Hola! Podés utilizar tu credencial digital de inmediato desde tu celular:*\n\n1. Ingresá a nuestro portal oficial: {LINK_PORTAL}\n2. Usuario: Tu número de DNI (sin puntos).\n3. Contraseña inicial: Los últimos 4 dígitos de tu DNI.\n\n💡 *Presentando la pantalla de la credencial en cualquier prestador o farmacia tenés atención directa sin carnet plástico.*\n\n👉 *¿Pudiste ingresar correctamente o requerís que te generemos una clave temporal?*",
-                    "tipping_point": "¿Pudiste ingresar correctamente o requerís que te generemos una clave temporal?",
-                    "key_benefit": "Autogestión inmediata con validación activa de acceso."
-                },
-                {
-                    "id": "cierre_fcr",
-                    "title": "Cierre de Consulta y Confirmación de Resolución (FCR)",
-                    "shortcut": "/fcr",
-                    "category": "Cierre / Calidad",
-                    "before": "'Cualquier cosa a disposición' (deja la gestión abierta o genera re-aperturas).",
-                    "after": "✅ *Tu gestión ha sido completada con éxito.*\n\nTe dejamos asentado el número de trámite para seguimiento. Recordá que también contás con nuestro portal web disponible las 24 horas.\n\n👉 *¿Quedó resuelta tu consulta o necesitás ayuda con algún otro trámite antes de finalizar?*",
-                    "tipping_point": "¿Quedó resuelta tu consulta o necesitás ayuda con algún otro trámite antes de finalizar?",
-                    "key_benefit": "Garantiza First Contact Resolution (FCR) y previene reaperturas de casos."
-                }
-            ]
+        is_sales = (focus == 'ventas')
 
-        # 2. CONSTRUCCIÓN / CORRALÓN (Catálogo Completo de 6 Plantillas)
-        elif rubro_key == 'construccion_corralon':
+        # 1. CONSTRUCCIÓN / CORRALÓN (Catálogo Completo de 6 Plantillas con [---saltomensaje---])
+        if rubro_key == 'construccion_corralon':
             return [
                 {
                     "id": "presupuesto_corralon",
@@ -1277,7 +1214,7 @@ class ActuenAnalyzer:
                     "shortcut": "/flete",
                     "category": "Logística",
                     "before": "'¿Llegan a Maipú?' -> 'Sí' -> '¿Cuánto sale?' -> 'Pasame la calle' (6 msgs).",
-                    "after": "¡Hola! Sí, realizamos entregas en toda la zona con flota propia de camiones volcadores e hidrogrúa:\n\n📍 *Para confirmarte el costo exacto y día de entrega, envianos:*\n1. Lista o cantidad de materiales.\n2. Dirección aproximada o barrio.\n3. ¿La calle permite el ingreso de camión grande?\n\n👉 *Con estos datos te pasamos el costo final puesto en obra de inmediato.*",
+                    "after": "¡Hola! Sí, realizamos entregas en toda la zona con flota propia de camiones volcadores e hidrogrúa:\n\n📍 *Para confirmarte el costo exacto y día de entrega, envianos:*\n1. Lista o cantidad de materiales.\n2. Dirección aproximada o barrio.\n3. ¿La calle permite el ingreso de camión grande?\n\n[---saltomensaje---]\n\n👉 *Con estos datos te pasamos el costo final puesto en obra de inmediato.*",
                     "tipping_point": "Envianos lista, barrio y acceso de camión para confirmar flete de inmediato.",
                     "key_benefit": "Captura los 3 datos logísticos en 1 solo paso."
                 },
@@ -1287,7 +1224,7 @@ class ActuenAnalyzer:
                     "shortcut": "/pago",
                     "category": "Cierre de Venta",
                     "before": "CBU descolgado -> '¿de qué es el comprobante?' -> 'cuit?' -> 'dirección?' (5 msgs).",
-                    "after": "🎯 *Para confirmar tu pedido N° {NRO_COTIZACION} y congelar el stock:*\n\n🏦 *Datos Bancarios Oficiales:*\n• *Titular:* CORRALON LUJAN S.A.\n• *Alias:* `CORRALON.LUJAN.SA`\n• *CBU:* `0270094610023521600015`\n• *Monto con 7% OFF:* *${MONTO_FINAL}*\n\n📝 *Una vez hecha la transferencia, envianos el comprobante con estos 4 datos en un solo mensaje:*\n1. Presupuesto N°: {NRO_COTIZACION}\n2. CUIT o DNI (para la factura):\n3. Dirección exacta de entrega:\n4. Nombre y teléfono de quién recibe en obra:\n\n¡Con eso ingresa inmediatamente a la hoja de ruta de logística! 🚚",
+                    "after": "🎯 *Para confirmar tu pedido N° {NRO_COTIZACION} y congelar el stock:*\n\n🏦 *Datos Bancarios Oficiales:*\n• *Titular:* CORRALON LUJAN S.A.\n• *Alias:* `CORRALON.LUJAN.SA`\n• *CBU:* `0270094610023521600015`\n• *Monto con 7% OFF:* *${MONTO_FINAL}*\n\n📝 *Una vez hecha la transferencia, envianos el comprobante con estos 4 datos en un solo mensaje:*\n1. Presupuesto N°: {NRO_COTIZACION}\n2. CUIT o DNI (para la factura):\n3. Dirección exacta de entrega:\n4. Nombre y teléfono de quién recibe en obra:\n\n[---saltomensaje---]\n\n¡Con eso ingresa inmediatamente a la hoja de ruta de logística! 🚚",
                     "tipping_point": "Una vez hecha la transferencia, envianos el comprobante con los 4 datos en un solo mensaje.",
                     "key_benefit": "Elimina el caos de identificación de pagos y reduce 5 mensajes a 1."
                 },
@@ -1297,7 +1234,7 @@ class ActuenAnalyzer:
                     "shortcut": "/hierros",
                     "category": "Hierros y Estructuras",
                     "before": "Múltiples mensajes preguntando medida por medida y flete por separado.",
-                    "after": "👋 ¡Hola! Contamos con stock completo de hierro de obra certificado (Acindar/Sipar):\n\n🔩 *Valores por barra (12 mts):*\n• Hierro del 6: ${P_6} | del 8: ${P_8} | del 10: ${P_10} | del 12: ${P_12}\n• Malla Cima 15x15 (del 4 / del 5 / del 6): Desde ${P_MALLA}\n• Alambre de fardo y estribos listos para armar.\n💡 *Precio bonificado abonando de contado/transferencia.*\n\n👉 *Pasame la lista completa de barras o mallas y la zona de obra para armarte el paquete con envío incluido.*",
+                    "after": "👋 ¡Hola! Contamos con stock completo de hierro de obra certificado (Acindar/Sipar):\n\n🔩 *Valores por barra (12 mts):*\n• Hierro del 6: ${P_6} | del 8: ${P_8} | del 10: ${P_10} | del 12: ${P_12}\n• Malla Cima 15x15 (del 4 / del 5 / del 6): Desde ${P_MALLA}\n• Alambre de fardo y estribos listos para armar.\n💡 *Precio bonificado abonando de contado/transferencia.*\n\n[---saltomensaje---]\n\n👉 *Pasame la lista completa de barras o mallas y la zona de obra para armarte el paquete con envío incluido.*",
                     "tipping_point": "Pasame la lista completa y la zona para armarte el paquete con envío incluido.",
                     "key_benefit": "Agrupa las medidas de hierro frecuentes y ancla el flete desde el inicio."
                 },
@@ -1307,13 +1244,132 @@ class ActuenAnalyzer:
                     "shortcut": "/rescate",
                     "category": "Seguimiento",
                     "before": "Silencio o 'Hola pudiste ver el PDF?' (tasa de respuesta < 10%).",
-                    "after": "👋 ¡Hola {NOMBRE}! ¿Cómo estás? Te escribo porque estamos coordinando la hoja de ruta de entregas para tu zona ({ZONA/BARRIO}).\n\nQueríamos consultarte si vas a confirmar el pedido del Presupuesto N° {NRO_COTIZACION} para reservarte el camión y sostenerte la bonificación especial de contado.\n\n👉 *¿Te guardamos el lugar de entrega para esta semana o precisás hacer algún ajuste en los materiales?*",
+                    "after": "👋 ¡Hola {NOMBRE}! ¿Cómo estás? Te escribo porque estamos coordinando la hoja de ruta de entregas para tu zona ({ZONA/BARRIO}).\n\nQueríamos consultarte si vas a confirmar el pedido del Presupuesto N° {NRO_COTIZACION} para reservarte el camión y sostenerte la bonificación especial de contado.\n\n[---saltomensaje---]\n\n👉 *¿Te guardamos el lugar de entrega para esta semana o precisás hacer algún ajuste en los materiales?*",
                     "tipping_point": "¿Te guardamos el lugar de entrega para esta semana o precisás algún ajuste?",
                     "key_benefit": "Reactivación contextual que ofrece valor logístico en lugar de presionar."
                 }
             ]
 
-        # 3. AUTOMOTOR / CONCESIONARIA (Catálogo Completo)
+        # 2. SALUD / OBRA SOCIAL (Catálogo Completo de 6 Plantillas)
+        elif rubro_key == 'salud_obra_social':
+            return [
+                {
+                    "id": "autorizaciones",
+                    "title": "Gestión de Autorizaciones y Estudios Médicos",
+                    "shortcut": "/autorizar",
+                    "category": "Trámites Médicos",
+                    "before": "Hola -> 'pasame foto' -> 'falta el diagnóstico' -> 'número de afiliado?' (5 mensajes).",
+                    "after": "👋 ¡Hola! Te ayudamos a gestionar tu autorización médica en este mismo mensaje:\n\n📋 *Por favor envianos en un solo envío:*\n1. Foto clara de la orden médica (con diagnóstico, fecha y firma visible).\n2. Número de DNI o Credencial del afiliado/a:\n3. Lugar o clínica donde realizarás la práctica:\n\n⏱️ *Tiempo estimado de resolución:* 24 a 48 hs hábiles.\n\n[---saltomensaje---]\n\n👉 *Apenas nos envíes estos datos ingresamos tu solicitud a auditoría médica para su aprobación.*",
+                    "tipping_point": "Apenas nos envíes la foto y los 3 datos ingresamos la solicitud a auditoría médica.",
+                    "key_benefit": "Elimina el ping-pong pidiendo los requisitos de validación médica en un solo bloque."
+                },
+                {
+                    "id": "turnos",
+                    "title": "Solicitud de Turnos y Cartilla Médica",
+                    "shortcut": "/turnos",
+                    "category": "Cartilla / Turnos",
+                    "before": "'Quiero turno' -> 'para qué médico?' -> 'qué zona?' -> 'qué día podés?' (6 mensajes).",
+                    "after": "¡Hola! Con gusto coordinamos tu turno o te brindamos los profesionales disponibles en cartilla:\n\n🩺 *Para asignarte la mejor opción, respondenos en este mensaje:*\n• Especialidad o médico requerido:\n• Zona o localidad de preferencia:\n• Días u horarios en los que podés asistir:\n• DNI o N° de Afiliado:\n\n[---saltomensaje---]\n\n👉 *Con estos datos te enviamos las próximas fechas disponibles de inmediato.*",
+                    "tipping_point": "Con estos datos te enviamos las opciones disponibles para reservar tu turno.",
+                    "key_benefit": "Reúne especialidad, zona y disponibilidad del paciente en 1 turno."
+                },
+                {
+                    "id": "reintegros",
+                    "title": "Reintegros y Facturación Médica",
+                    "shortcut": "/reintegro",
+                    "category": "Facturación",
+                    "before": "Factura suelta -> 'de quién es?' -> 'pasame CBU' -> 'falta orden' (4 mensajes).",
+                    "after": "🎯 *Para procesar tu reintegro médico de forma directa:*\n\n📝 *Envianos en un solo mensaje:*\n1. Factura oficial (con CUIT del profesional o clínica).\n2. Orden médica o pedido de estudio que originó el gasto.\n3. CBU o Alias bancario del titular para el depósito.\n4. Nombre completo y DNI del afiliado:\n\n[---saltomensaje---]\n\n👉 *¿Contás con esta documentación a mano para cargar el expediente hoy mismo?*",
+                    "tipping_point": "¿Contás con esta documentación a mano para cargar el expediente hoy mismo?",
+                    "key_benefit": "Evita rechazos de reintegro por documentación incompleta."
+                },
+                {
+                    "id": "recetas_farmacia",
+                    "title": "Recetas Electrónicas y Cobertura de Farmacia",
+                    "shortcut": "/receta",
+                    "category": "Farmacia",
+                    "before": "'No me pasa la receta' -> 'qué farmacia?' -> 'qué remedio es?' (5 msgs).",
+                    "after": "👋 ¡Hola! Te asistimos con la validación de tu receta de medicamentos:\n\n💊 *Por favor envianos:*\n1. Foto de la receta o prescripción digital:\n2. Número de credencial de afiliado/a:\n3. Farmacia donde estás realizando la compra (Nombre y localidad):\n\n[---saltomensaje---]\n\n👉 *Validamos la cobertura en el sistema y te confirmamos en este mismo chat.*",
+                    "tipping_point": "Validamos la cobertura en el sistema y te confirmamos en este mismo chat.",
+                    "key_benefit": "Resuelve la autorización de farmacia en caliente sin idas y vueltas."
+                },
+                {
+                    "id": "credencial_digital",
+                    "title": "Descarga de Credencial Digital y Carnet",
+                    "shortcut": "/credencial",
+                    "category": "Afiliaciones",
+                    "before": "Cliente pide carnet -> asesor envía links rotos -> pide datos de nuevo.",
+                    "after": "📱 *¡Hola! Podés utilizar tu credencial digital de inmediato desde tu celular:*\n\n1. Ingresá a nuestro portal oficial: {LINK_PORTAL}\n2. Usuario: Tu número de DNI (sin puntos).\n3. Contraseña inicial: Los últimos 4 dígitos de tu DNI.\n\n💡 *Presentando la pantalla de la credencial en cualquier prestador o farmacia tenés atención directa sin carnet plástico.*\n\n[---saltomensaje---]\n\n👉 *¿Pudiste ingresar correctamente o requerís que te generemos una clave temporal?*",
+                    "tipping_point": "¿Pudiste ingresar correctamente o requerís que te generemos una clave temporal?",
+                    "key_benefit": "Autogestión inmediata con validación activa de acceso."
+                },
+                {
+                    "id": "cierre_fcr",
+                    "title": "Cierre de Consulta y Confirmación de Resolución (FCR)",
+                    "shortcut": "/fcr",
+                    "category": "Cierre / Calidad",
+                    "before": "'Cualquier cosa a disposición' (deja la gestión abierta o genera re-aperturas).",
+                    "after": "✅ *Tu gestión ha sido completada con éxito.*\n\nTe dejamos asentado el número de trámite para seguimiento. Recordá que también contás con nuestro portal web disponible las 24 horas.\n\n[---saltomensaje---]\n\n👉 *¿Quedó resuelta tu consulta o necesitás ayuda con algún otro trámite antes de finalizar?*",
+                    "tipping_point": "¿Quedó resuelta tu consulta o necesitás ayuda con algún otro trámite antes de finalizar?",
+                    "key_benefit": "Garantiza First Contact Resolution (FCR) y previene reaperturas de casos."
+                }
+            ]
+
+        # 3. COMERCIO / RETAIL / E-COMMERCE (Catálogo de 5 Plantillas)
+        elif rubro_key == 'comercio_retail':
+            return [
+                {
+                    "id": "stock_retail",
+                    "title": "Stock, Talles, Precios y Link de Compra Directo",
+                    "shortcut": "/producto",
+                    "category": "Ventas Retail",
+                    "before": "'Tenés talle?' -> 'Sí' -> '¿Cuánto sale?' -> '¿Hacen envíos?' (6 msgs).",
+                    "after": "👋 ¡Hola! Sí, contamos con stock disponible de *{PRODUCTO}*:\n\n🛍️ *Detalles del producto:*\n• *Talles / Variantes disponibles:* {TALLES}\n• *Precio de Lista:* ${PRECIO} *(3 cuotas sin interés)*\n• 💡 *10% OFF pagando con transferencia o efectivo:* *${PRECIO_DESCUENTO}*\n• 🚚 *Envíos:* Despachamos a todo el país o retiro en sucursal hoy mismo.\n\n[---saltomensaje---]\n\n👉 *¿En qué talle o color te gustaría reservarlo para pasarte el link de pago y congelar la unidad?*",
+                    "tipping_point": "¿En qué talle o color te gustaría reservarlo para pasarte el link de pago?",
+                    "key_benefit": "Une stock, talle, cuotas, descuento y link en un solo bloque estructurado."
+                },
+                {
+                    "id": "envios_retail",
+                    "title": "Costo de Envío y Tiempos de Entrega",
+                    "shortcut": "/envio",
+                    "category": "Logística / Despacho",
+                    "before": "'¿Cuánto sale a Córdoba?' -> 'Pasame el CP' -> 'Espera que cotizo' (5 msgs).",
+                    "after": "📦 *¡Hola! Realizamos envíos diarios a todo el país:*\n\n• *Envío a Domicilio (Express):* 24 a 48 hs hábiles.\n• *Retiro en Punto Pick-up / Sucursal:* Disponible sin costo de flete.\n• 🎁 *Envío GRATIS* en compras superiores a ${MONTO_MINIMO_ENVIO}.\n\n[---saltomensaje---]\n\n👉 *Envianos tu Código Postal o Localidad para confirmarte el costo exacto y fecha de llegada a tu puerta.*",
+                    "tipping_point": "Envianos tu Código Postal o Localidad para confirmarte costo y fecha exacta.",
+                    "key_benefit": "Explica la política de envíos gratis y solicita CP en 1 turno."
+                },
+                {
+                    "id": "pago_retail",
+                    "title": "Medios de Pago, Cuotas y Datos de Transferencia",
+                    "shortcut": "/pago",
+                    "category": "Cobranzas",
+                    "after": "💳 *Medios de Pago Habilitados para tu Pedido:*\n\n1. *Transferencia Bancaria con 10% OFF:*\n• *Alias:* `TIENDA.OFICIAL.PAGOS`\n• *Monto con Descuento:* *${TOTAL_TRANSFERENCIA}*\n2. *Tarjetas de Crédito:* Hasta 3 o 6 cuotas sin interés mediante link seguro.\n\n[---saltomensaje---]\n\n👉 *Apenas realices el pago, adjuntanos el comprobante junto con tu DNI para emitir la factura y despachar tu paquete.*",
+                    "tipping_point": "Adjuntanos el comprobante junto con tu DNI para despachar tu paquete.",
+                    "key_benefit": "Resume la cuenta bancaria, cuotas y requisitos de facturación en 1 paso."
+                },
+                {
+                    "id": "cambios_retail",
+                    "title": "Política de Cambios y Devoluciones sin Fricción",
+                    "shortcut": "/cambio",
+                    "category": "Postventa",
+                    "before": "Ping-pong de reclamo por talle con derivaciones infinitas y quejas.",
+                    "after": "👋 ¡Hola! Con gusto gestionamos el cambio de tu prenda:\n\n🔄 *Para procesarlo de inmediato en el sistema:*\n1. Número de pedido o ticket de compra:\n2. Prenda que recibiste y nuevo talle o modelo requerido:\n3. ¿Deseás cambiarla en sucursal o coordinar retiro a domicilio?\n\n[---saltomensaje---]\n\n👉 *Apenas nos confirmes te reservamos la nueva unidad para evitar que se agote.*",
+                    "tipping_point": "Apenas nos confirmes te reservamos la nueva unidad para asegurar stock.",
+                    "key_benefit": "Resuelve la postventa sin fricción y retiene la venta."
+                },
+                {
+                    "id": "rescate_carrito",
+                    "title": "Protocolo de Rescate de Carrito / Consulta Abandonada",
+                    "shortcut": "/rescate",
+                    "category": "Seguimiento",
+                    "before": "'Hola pudiste ver?' -> Visto clavado.",
+                    "after": "👋 ¡Hola {NOMBRE}! Vimos que estuviste consultando por *{PRODUCTO}*.\n\nTe queríamos avisar que quedan las últimas 2 unidades en tu talle y te guardamos un cupón de *envío bonificado* por hoy.\n\n[---saltomensaje---]\n\n👉 *¿Querés que te reservemos la prenda antes de que vuelva al stock general de la tienda?*",
+                    "tipping_point": "¿Querés que te reservemos la prenda antes de que vuelva al stock general?",
+                    "key_benefit": "Aplica escasez y beneficio de flete para cerrar la venta fría."
+                }
+            ]
+
+        # 4. AUTOMOTOR / CONCESIONARIA (Catálogo Completo)
         elif rubro_key == 'automotor_concesionaria':
             return [
                 {
@@ -1322,7 +1378,7 @@ class ActuenAnalyzer:
                     "shortcut": "/auto",
                     "category": "Ventas / 0km y Usados",
                     "before": "'Hola precio del auto' -> '0km o usado?' -> 'qué versión?' (5 msgs).",
-                    "after": "👋 ¡Hola! Te comparto la información de la unidad solicitada:\n\n🚗 *{MODELO_VEHICULO} - Versión {VERSION}*\n• *Precio de Lista:* ${PRECIO_LISTA}\n• 💡 *Bonificación especial este mes:* *${PRECIO_BONIFICADO}*\n• *Financiación exclusiva:* Hasta el 50% en tasa preferencial.\n• *Entrega:* Inmediata / En stock en salón.\n\n👉 *¿Te gustaría coordinar una visita al salón para verlo en persona y realizar un Test Drive esta semana?*",
+                    "after": "👋 ¡Hola! Te comparto la información de la unidad solicitada:\n\n🚗 *{MODELO_VEHICULO} - Versión {VERSION}*\n• *Precio de Lista:* ${PRECIO_LISTA}\n• 💡 *Bonificación especial este mes:* *${PRECIO_BONIFICADO}*\n• *Financiación exclusiva:* Hasta el 50% en tasa preferencial.\n• *Entrega:* Inmediata / En stock en salón.\n\n[---saltomensaje---]\n\n👉 *¿Te gustaría coordinar una visita al salón para verlo en persona y realizar un Test Drive esta semana?*",
                     "tipping_point": "¿Te gustaría coordinar una visita para realizar un Test Drive esta semana?",
                     "key_benefit": "Pasa precio, financiación y llama al Test Drive en un solo bloque."
                 },
@@ -1332,7 +1388,7 @@ class ActuenAnalyzer:
                     "shortcut": "/usado",
                     "category": "Tasaciones",
                     "before": "Múltiples mensajes pidiendo año, modelo, fotos, kilometraje de a uno.",
-                    "after": "¡Hola! Sí, tomamos tu vehículo usado como parte de pago al mejor valor de mercado.\n\n📋 *Para pasarte una cotización estimada de toma en este momento, envianos:*\n1. Marca, modelo y versión exacta:\n2. Año de patentamiento y kilometraje:\n3. ¿Sos titular y está al día de patentes/multas?\n4. 3 fotos generales (frente, lateral e interior):\n\n👉 *Con estos datos nuestro tasador te pasa el valor de toma de inmediato.*",
+                    "after": "¡Hola! Sí, tomamos tu vehículo usado como parte de pago al mejor valor de mercado.\n\n📋 *Para pasarte una cotización estimada de toma en este momento, envianos:*\n1. Marca, modelo y versión exacta:\n2. Año de patentamiento y kilometraje:\n3. ¿Sos titular y está al día de patentes/multas?\n4. 3 fotos generales (frente, lateral e interior):\n\n[---saltomensaje---]\n\n👉 *Con estos datos nuestro tasador te pasa el valor de toma de inmediato.*",
                     "tipping_point": "Envianos los 4 datos y fotos para pasarte la cotización estimada de toma.",
                     "key_benefit": "Pide toda la ficha de tasación de una sola vez."
                 },
@@ -1342,13 +1398,23 @@ class ActuenAnalyzer:
                     "shortcut": "/service",
                     "category": "Postventa / Taller",
                     "before": "'Quiero hacer el service' -> 'cuántos km tiene?' -> 'qué patente?' (5 msgs).",
-                    "after": "👋 ¡Hola! Con gusto coordinamos el turno de mantenimiento de tu unidad:\n\n🔧 *Por favor confirmanos en un solo mensaje:*\n1. Modelo y patente del vehículo:\n2. Kilometraje actual (ej. 10.000 / 20.000 km):\n3. ¿Deseás revisar algún punto específico además del service oficial?\n4. Sucursal y día de preferencia:\n\n👉 *Con estos datos te reservamos el horario de ingreso al taller hoy mismo.*",
+                    "after": "👋 ¡Hola! Con gusto coordinamos el turno de mantenimiento de tu unidad:\n\n🔧 *Por favor confirmanos en un solo mensaje:*\n1. Modelo y patente del vehículo:\n2. Kilometraje actual (ej. 10.000 / 20.000 km):\n3. ¿Deseás revisar algún punto específico además del service oficial?\n4. Sucursal y día de preferencia:\n\n[---saltomensaje---]\n\n👉 *Con estos datos te reservamos el horario de ingreso al taller hoy mismo.*",
                     "tipping_point": "Con estos datos te reservamos el horario de ingreso al taller hoy mismo.",
                     "key_benefit": "Centraliza los datos de postventa en 1 turno."
+                },
+                {
+                    "id": "rescate_concesionaria",
+                    "title": "Rescate de Consulta de Vehículo (Test Drive / Financiación)",
+                    "shortcut": "/rescate",
+                    "category": "Seguimiento",
+                    "before": "El asesor no hace seguimiento o pregunta '¿pudiste ver el precio?'.",
+                    "after": "👋 ¡Hola {NOMBRE}! Te escribo del equipo comercial de {CONCESIONARIA}.\n\nNos ingresó una bonificación de fábrica de ${DESCUENTO_ESPECIAL} en tasa de financiación para la unidad {MODELO} que consultaste.\n\n[---saltomensaje---]\n\n👉 *¿Te gustaría aprovechar este cupo antes de que finalice la campaña este viernes?*",
+                    "tipping_point": "¿Te gustaría aprovechar este cupo de tasa antes de que finalice?",
+                    "key_benefit": "Aporta una excusa comercial real (tasa bonificada) para reactivar al prospecto."
                 }
             ]
 
-        # 4. INMOBILIARIA / DESARROLLOS
+        # 5. INMOBILIARIA / DESARROLLOS
         elif rubro_key == 'inmobiliaria_desarrollos':
             return [
                 {
@@ -1357,7 +1423,7 @@ class ActuenAnalyzer:
                     "shortcut": "/propiedad",
                     "category": "Propiedades",
                     "before": "Fotos sueltas -> 'cuánto sale?' -> 'dónde queda?' -> 'cuándo se ve?' (7 msgs).",
-                    "after": "👋 ¡Hola! Te comparto los detalles de la propiedad consultada:\n\n🏡 *{TIPO_PROPIEDAD} en {ZONA/BARRIO}*\n• *Valor:* ${VALOR_ALQUILER_VENTA} *(Expensas: ${EXPENSAS})*\n• *Características:* {CANT_DORMITORIOS} dormitorios, {BANOS} baños, cochera y balcón.\n• *Disponibilidad:* Inmediata.\n\n📅 *Coordinación de Visitas:*\nDisponemos de turnos para visitarla los {DIAS_VISITA} de {HORARIOS}.\n\n👉 *¿Qué día y horario te queda más cómodo para agendar tu visita presencial?*",
+                    "after": "👋 ¡Hola! Te comparto los detalles de la propiedad consultada:\n\n🏡 *{TIPO_PROPIEDAD} en {ZONA/BARRIO}*\n• *Valor:* ${VALOR_ALQUILER_VENTA} *(Expensas: ${EXPENSAS})*\n• *Características:* {CANT_DORMITORIOS} dormitorios, {BANOS} baños, cochera y balcón.\n• *Disponibilidad:* Inmediata.\n\n📅 *Coordinación de Visitas:*\nDisponemos de turnos para visitarla los {DIAS_VISITA} de {HORARIOS}.\n\n[---saltomensaje---]\n\n👉 *¿Qué día y horario te queda más cómodo para agendar tu visita presencial?*",
                     "tipping_point": "¿Qué día y horario te queda más cómodo para agendar tu visita presencial?",
                     "key_benefit": "Resume precio, expensas, comodidades y agenda la visita en el acto."
                 },
@@ -1367,75 +1433,76 @@ class ActuenAnalyzer:
                     "shortcut": "/alquiler",
                     "category": "Alquileres",
                     "before": "Ping-pong eterno preguntando recibos de sueldo y garantías sueltas.",
-                    "after": "📋 *Condiciones y requisitos para alquilar {PROPIEDAD}:*\n\n1. *Titular:* Demostración de ingresos (últimos 3 recibos de sueldo o certificación contable).\n2. *Garantías:* 2 garantes con bono de sueldo o 1 garantía propietaria (o seguro de caución).\n3. *Gastos de ingreso:* 1 mes de alquiler + 1 mes de depósito de garantía + honorarios de contrato.\n\n👉 *¿Contás con esta documentación para enviarte el formulario de postulación directa?*",
+                    "after": "📋 *Condiciones y requisitos para alquilar {PROPIEDAD}:*\n\n1. *Titular:* Demostración de ingresos (últimos 3 recibos de sueldo o certificación contable).\n2. *Garantías:* 2 garantes con bono de sueldo o 1 garantía propietaria (o seguro de caución).\n3. *Gastos de ingreso:* 1 mes de alquiler + 1 mes de depósito de garantía + honorarios de contrato.\n\n[---saltomensaje---]\n\n👉 *¿Contás con esta documentación para enviarte el formulario de postulación directa?*",
                     "tipping_point": "¿Contás con esta documentación para enviarte el formulario de postulación?",
                     "key_benefit": "Filtra postulantes calificados sin repreguntas."
-                }
-            ]
-
-        # 5. RETAIL / E-COMMERCE
-        elif rubro_key == 'comercio_retail':
-            return [
-                {
-                    "id": "stock_retail",
-                    "title": "Stock, Talles y Link de Compra Directo",
-                    "shortcut": "/producto",
-                    "category": "Ventas Retail",
-                    "before": "'Tenés talle?' -> 'Sí' -> '¿Cuánto sale?' -> '¿Hacen envíos?' (6 msgs).",
-                    "after": "👋 ¡Hola! Sí, tenemos stock disponible de *{PRODUCTO}*:\n\n🛍️ *Detalles del producto:*\n• *Talles / Variantes disponibles:* {TALLES}\n• *Precio:* ${PRECIO} *(3 cuotas sin interés con tarjeta)*\n• 💡 *10% OFF pagando con transferencia o efectivo:* *${PRECIO_TRANSFERENCIA}*\n• 🚚 *Envíos:* Despachamos a todo el país (o retiro en sucursal hoy mismo).\n\n👉 *¿En qué talle te gustaría reservarlo para pasarte el link de pago y asegurar la prenda?*",
-                    "tipping_point": "¿En qué talle te gustaría reservarlo para pasarte el link de pago?",
-                    "key_benefit": "Une stock, talle, cuotas y link de compra en 1 turno."
                 },
                 {
-                    "id": "cambios_retail",
-                    "title": "Política de Cambios y Devoluciones sin Vueltas",
-                    "shortcut": "/cambio",
-                    "category": "Postventa",
-                    "before": "Ping-pong de reclamo por talle o falla con derivaciones infinitas.",
-                    "after": "👋 ¡Hola! Con gusto gestionamos el cambio de tu prenda:\n\n🔄 *Para procesarlo de inmediato:*\n1. Número de pedido o ticket de compra:\n2. Prenda que recibiste y nuevo talle o modelo requerido:\n3. ¿Deseás cambiarla en sucursal o coordinar retiro a domicilio?\n\n👉 *Apenas nos confirmes te reservamos la nueva unidad para evitar que se agote.*",
-                    "tipping_point": "Apenas nos confirmes te reservamos la nueva unidad para asegurar stock.",
-                    "key_benefit": "Resuelve la postventa sin fricción y retiene al cliente."
+                    "id": "tasacion_inmueble",
+                    "title": "Solicitud de Tasación Inmobiliaria",
+                    "shortcut": "/tasacion",
+                    "category": "Tasaciones",
+                    "before": "Múltiples preguntas dispersas sobre m2, estado y dirección.",
+                    "after": "🏡 *¡Hola! Realizamos tasaciones profesionales de mercado para venta y alquiler:*\n\n📋 *Para coordinar la inspección técnica de tu propiedad, envianos:*\n1. Dirección exacta y barrio:\n2. Tipo de inmueble (Casa / Departamento / Lote / Local):\n3. Superficie estimada (m² cubiertos y totales):\n4. ¿El inmueble cuenta con escritura al día?\n\n[---saltomensaje---]\n\n👉 *Con estos datos te agendamos la visita de nuestro tasador sin costo.*",
+                    "tipping_point": "Envianos dirección, tipo, superficie y estado de escritura.",
+                    "key_benefit": "Agrupa la ficha del inmueble para tasación inmediata."
+                },
+                {
+                    "id": "rescate_propiedad",
+                    "title": "Seguimiento y Cierre de Visita a Propiedad",
+                    "shortcut": "/rescate",
+                    "category": "Seguimiento",
+                    "before": "'Hola qué te pareció el departamento?' -> silencio.",
+                    "after": "👋 ¡Hola {NOMBRE}! ¿Cómo estás? Te escribo para consultar qué te pareció la visita a la propiedad de {CALLE/BARRIO}.\n\nEl propietario está dispuesto a escuchar una propuesta de reserva esta semana antes de abrirla a otros interesados.\n\n[---saltomensaje---]\n\n👉 *¿Te gustaría presentar una oferta formal o te mostramos otra alternativa en la misma zona?*",
+                    "tipping_point": "¿Te gustaría presentar una oferta formal o ver otra alternativa?",
+                    "key_benefit": "Estimula la reserva rápida o redirige a otra propiedad del portfolio."
                 }
             ]
 
-        # 6. GENÉRICO / SOPORTE O VENTAS
+        # 6. GENÉRICO MULTIRUBRO / SERVICIOS PROFESIONALES / FINANZAS / SAAS
         else:
-            if focus == 'soporte':
-                return [
-                    {
-                        "id": "triaje_soporte",
-                        "title": "Triaje de Soporte y Diagnóstico en 1 Turno",
-                        "shortcut": "/soporte",
-                        "category": "Soporte Técnico",
-                        "before": "Hola -> 'qué problema tenés?' -> 'pasame captura' -> 'qué usuario sos?' (4 msgs).",
-                        "after": "👋 ¡Hola! Te ayudamos a resolver la incidencia rápidamente.\n\n🔍 *Para diagnosticarlo en este momento, envianos en un solo mensaje:*\n1. Número de cliente, DNI o usuario:\n2. Descripción breve de la falla observada:\n3. Captura de pantalla o foto del error:\n\n👉 *Con estos datos aislamos la causa y te damos una solución inmediata.*",
-                        "tipping_point": "Con estos datos aislamos la causa y te damos una solución inmediata.",
-                        "key_benefit": "Diagnostica la incidencia en 1 solo paso sin repreguntas."
-                    },
-                    {
-                        "id": "cierre_fcr_gral",
-                        "title": "Confirmación de Solución de Soporte (FCR)",
-                        "shortcut": "/resuelto",
-                        "category": "Cierre Soporte",
-                        "before": "Respuestas pasivas tipo 'listo, avisame si anda'.",
-                        "after": "✅ *El inconveniente ha sido corregido en nuestro sistema.*\n\nPor favor verificá el funcionamiento cuando puedas.\n\n👉 *¿Pudiste comprobar que funciona correctamente o requerís asistencia adicional antes de cerrar el caso?*",
-                        "tipping_point": "¿Pudiste comprobar que funciona correctamente o requerís asistencia adicional?",
-                        "key_benefit": "Valida la resolución efectiva antes de dar por cerrado el ticket."
-                    }
-                ]
-            else:
-                return [
-                    {
-                        "id": "presupuesto_comercial",
-                        "title": "Presupuesto General con Bonificación Contado",
-                        "shortcut": "/coti",
-                        "category": "Ventas / Precios",
-                        "before": "Buenos días -> 'en breve enviamos valor' -> PDF adjunto -> silencio.",
-                        "after": "👋 ¡Hola! Te adjunto el presupuesto detallado (*Cotización N° {NRO_COTIZACION}*).\n\n📋 *Resumen comercial:*\n• *Total de Lista / Financiado:* ${TOTAL_LISTA}\n• 💡 *Precio Especial Contado / Transferencia:* *${TOTAL_DESCUENTO}*\n• *Disponibilidad:* Stock disponible para despacho o retiro inmediato.\n• *Entrega:* Cotizado para {ZONA/LOCALIDAD}.\n\n⏱️ _Validez de precios: 48 horas._\n\n👉 *¿Querés que te reservemos las unidades para confirmar el despacho esta semana?*",
-                        "tipping_point": "¿Querés que te reservemos las unidades para confirmar el despacho esta semana?",
-                        "key_benefit": "Resume la oferta en el chat, destaca el descuento de contado y cierra con Tipping Point."
-                    }
-                ]
+            return [
+                {
+                    "id": "presupuesto_comercial",
+                    "title": "Presupuesto General con Bonificación Contado",
+                    "shortcut": "/coti",
+                    "category": "Ventas / Precios",
+                    "before": "Buenos días -> 'en breve enviamos valor' -> PDF adjunto -> silencio.",
+                    "after": "👋 ¡Hola! Te adjunto el presupuesto detallado (*Cotización N° {NRO_COTIZACION}*):\n\n📋 *Resumen comercial:*\n• *Total de Lista / Financiado:* ${TOTAL_LISTA}\n• 💡 *Precio Especial Contado / Transferencia:* *${TOTAL_DESCUENTO}*\n• *Disponibilidad:* Stock disponible para despacho o retiro inmediato.\n• *Entrega:* Cotizado para {ZONA/LOCALIDAD}.\n\n⏱️ _Validez de precios: 48 horas._\n\n[---saltomensaje---]\n\n👉 *¿Querés que te reservemos las unidades para confirmar el despacho esta semana?*",
+                    "tipping_point": "¿Querés que te reservemos las unidades para confirmar el despacho esta semana?",
+                    "key_benefit": "Resume la oferta en el chat, destaca el descuento de contado y cierra con Tipping Point."
+                },
+                {
+                    "id": "medios_pago_gral",
+                    "title": "Medios de Pago, Transferencia y Facturación",
+                    "shortcut": "/pago",
+                    "category": "Cobranzas",
+                    "before": "Pasa CBU suelto -> pide comprobante -> cliente no pone número de pedido.",
+                    "after": "🎯 *Para confirmar tu servicio y registrar el pago en el sistema:*\n\n🏦 *Datos de Pago:*\n• *Alias:* `PAGOS.EMPRESA.OFICIAL`\n• *CBU:* `0170099900001234567890`\n• *Importe Final:* *${MONTO_FINAL}*\n\n📝 *Una vez hecha la transferencia, envianos:*\n1. Comprobante de pago:\n2. CUIT o DNI (para la factura):\n3. Razón Social o Nombre Completo:\n\n[---saltomensaje---]\n\n¡Con eso ingresa de inmediato a nuestro sistema de gestión! 🚀",
+                    "tipping_point": "Envianos comprobante, CUIT y Razón Social en un solo mensaje.",
+                    "key_benefit": "Elimina el caos de identificación de transferencias y reduce 4 mensajes a 1."
+                },
+                {
+                    "id": "triaje_soporte_gral",
+                    "title": "Triaje de Diagnóstico y Requisitos en 1 Turno",
+                    "shortcut": "/soporte",
+                    "category": "Soporte / Trámites",
+                    "before": "Hola -> 'qué problema tenés?' -> 'pasame captura' -> 'qué usuario sos?' (4 msgs).",
+                    "after": "👋 ¡Hola! Te ayudamos a resolver tu solicitud en este mismo turno:\n\n🔍 *Para gestionarlo en este momento, envianos en un solo mensaje:*\n1. Número de cliente, DNI o usuario:\n2. Descripción breve de la consulta o falla:\n3. Foto o comprobante adjunto (si corresponde):\n\n[---saltomensaje---]\n\n👉 *Con estos datos aislamos la causa y te damos una respuesta inmediata.*",
+                    "tipping_point": "Con estos datos aislamos la causa y te damos una solución inmediata.",
+                    "key_benefit": "Diagnostica la gestión en 1 solo paso sin repreguntas."
+                },
+                {
+                    "id": "rescate_comercial_gral",
+                    "title": "Protocolo de Rescate y Seguimiento de Contacto Frío",
+                    "shortcut": "/rescate",
+                    "category": "Seguimiento",
+                    "before": "Silencio o 'Hola pudiste ver?' (tasa de respuesta menor al 10%).",
+                    "after": "👋 ¡Hola {NOMBRE}! ¿Cómo estás? Te escribo para consultar si pudiste revisar la propuesta comercial que te enviamos.\n\nEstamos coordinando la agenda de altas y entregas de esta semana y queríamos asegurarte las condiciones bonificadas.\n\n[---saltomensaje---]\n\n👉 *¿Querés que te guardemos el lugar de reserva o necesitás que ajustemos algún punto del presupuesto?*",
+                    "tipping_point": "¿Querés que te guardemos el lugar de reserva o ajustamos algún punto?",
+                    "key_benefit": "Reactivación contextual sin presionar al cliente."
+                }
+            ]
 
     def export_report_markdown(self, analysis_result):
         meta = analysis_result["meta"]

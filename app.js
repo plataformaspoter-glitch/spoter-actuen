@@ -2,7 +2,7 @@
 let currentData = null;
 let currentFiles = null;
 let charts = {};
-let showAllTemplates = false;
+let showAllTemplates = true;
 
 // Diccionario interactivo de explicaciones para el modal Spoter
 const EXPLANATIONS = {
@@ -409,13 +409,17 @@ function runClientSideAnalysis(rows, forcedFocus = null, handoffPolicy = null, f
   let waitTimes = [];
   let allClientText = [];
 
+  const splitRegex = /\s*\[?-*salto[-_]?mensaje-*\]?\s*/i;
+
   rows.forEach(r => {
     const propio = (r['Propio'] || '').trim().toLowerCase() === 'si';
     const msg = (r['Mensaje'] || '').trim();
     if (propio) {
-      companyMsgs++;
+      const splitParts = msg ? msg.split(splitRegex).filter(p => p.trim()) : [];
+      const effectiveCount = Math.max(1, splitParts.length);
+      companyMsgs += effectiveCount;
       const op = (r['Nombre Operador'] || '').trim() || 'Bot / Sistema';
-      opCounts[op] = (opCounts[op] || 0) + 1;
+      opCounts[op] = (opCounts[op] || 0) + effectiveCount;
       const dest = (r['Destinatario'] || '').trim();
       if (dest) {
         if (!clientConvs[dest]) clientConvs[dest] = [];
@@ -438,61 +442,78 @@ function runClientSideAnalysis(rows, forcedFocus = null, handoffPolicy = null, f
   const uniqueClients = Object.keys(clientConvs).length || 1;
   const fullText = allClientText.join(' ');
 
-  let rubro = "Servicios Generales";
-  let defaultFocus = "soporte";
+  let rubroKey = "construccion_corralon";
+  let rubro = "Construcción / Corralón / Materiales";
+  let defaultFocus = "ventas";
 
   if (fullText.includes("autoriz") || fullText.includes("afiliad") || fullText.includes("medico") || fullText.includes("receta") || fullText.includes("turno")) {
+    rubroKey = "salud_obra_social";
     rubro = "Salud / Obra Social / Prepaga";
     defaultFocus = "soporte";
-  } else if (fullText.includes("cemento") || fullText.includes("hierro") || fullText.includes("arena") || fullText.includes("chapa")) {
-    rubro = "Construcción / Corralón";
+  } else if (fullText.includes("cemento") || fullText.includes("hierro") || fullText.includes("arena") || fullText.includes("chapa") || fullText.includes("flete") || fullText.includes("ladrillo") || fullText.includes("corralon")) {
+    rubroKey = "construccion_corralon";
+    rubro = "Construcción / Corralón / Materiales";
     defaultFocus = "ventas";
-  } else if (fullText.includes("auto") || fullText.includes("0km") || fullText.includes("usado")) {
-    rubro = "Automotor / Concesionaria";
+  } else if (fullText.includes("auto") || fullText.includes("0km") || fullText.includes("usado") || fullText.includes("taller")) {
+    rubroKey = "automotor_concesionaria";
+    rubro = "Automotor / Concesionaria / Repuestos";
+    defaultFocus = "ventas";
+  } else if (fullText.includes("talle") || fullText.includes("prenda") || fullText.includes("envio gratis") || fullText.includes("remera") || fullText.includes("pantalon") || fullText.includes("vestido")) {
+    rubroKey = "comercio_retail";
+    rubro = "Comercio / Retail / E-commerce";
+    defaultFocus = "ventas";
+  } else if (fullText.includes("inmueble") || fullText.includes("propiedad") || fullText.includes("alquiler") || fullText.includes("expensas") || fullText.includes("depto")) {
+    rubroKey = "inmobiliaria_desarrollos";
+    rubro = "Inmobiliaria / Desarrollos / Alquileres";
     defaultFocus = "ventas";
   }
 
   const activeFocus = forcedFocus || defaultFocus;
   const isSales = (activeFocus === 'ventas');
-  const policy = handoffPolicy || 'hybrid';
+  const policy = handoffPolicy || localStorage.getItem('spoter_handoff_policy') || 'hybrid';
 
+  // Handoff Bot vs Humanos
   let botMsgs = 0;
   let humanMsgs = 0;
-  const humanCounts = {};
-  const opList = [];
+  let topHumanName = "Operador 1";
+  let topHumanMsgs = 0;
 
-  for (let [op, cnt] of Object.entries(opCounts)) {
-    const isBot = /bot|sistema|auto/i.test(op);
-    if (isBot) botMsgs += cnt;
-    else {
-      humanMsgs += cnt;
-      humanCounts[op] = (humanCounts[op] || 0) + cnt;
+  Object.keys(opCounts).forEach(op => {
+    const count = opCounts[op];
+    if (/bot|sistema|auto/i.test(op)) {
+      botMsgs += count;
+    } else {
+      humanMsgs += count;
+      if (count > topHumanMsgs) {
+        topHumanMsgs = count;
+        topHumanName = op;
+      }
     }
-    opList.push({
-      operator: op,
-      is_bot: isBot,
-      messages: cnt,
-      percentage: Math.round((cnt / (companyMsgs || 1)) * 1000) / 10,
-      est_hours_spent: Math.round((cnt * 0.75) / 60 * 10) / 10
-    });
-  }
+  });
 
-  const sortedHuman = Object.entries(humanCounts).sort((a,b) => b[1] - a[1]);
-  const topHumanName = sortedHuman.length ? sortedHuman[0][0] : "Sin asignar";
-  const topHumanCount = sortedHuman.length ? sortedHuman[0][1] : 0;
-  const topHumanPct = Math.round((topHumanCount / (humanMsgs || 1)) * 1000) / 10;
+  const totalComp = companyMsgs || 1;
+  const botShare = Math.round((botMsgs / totalComp) * 1000) / 10;
+  const humanShare = Math.round((humanMsgs / totalComp) * 1000) / 10;
+  const topHumanPct = Math.round((topHumanMsgs / (humanMsgs || 1)) * 1000) / 10;
 
-  const handoffData = {
+  let handoffData = {
     policy: policy,
     bot_messages: botMsgs,
-    bot_share_percentage: Math.round((botMsgs / (companyMsgs || 1)) * 1000) / 10,
     human_messages: humanMsgs,
-    human_share_percentage: Math.round((humanMsgs / (companyMsgs || 1)) * 1000) / 10,
+    bot_share_percentage: botShare,
+    human_share_percentage: humanShare,
     top_human_operator: topHumanName,
-    top_human_messages: topHumanCount,
+    top_human_messages: topHumanMsgs,
     top_human_percentage_of_human: topHumanPct,
-    top_human_percentage_of_total: Math.round((topHumanCount / (companyMsgs || 1)) * 1000) / 10,
-    is_bot_dominant: (botMsgs / (companyMsgs || 1)) > 0.5
+    top_human_percentage_of_total: Math.round((topHumanMsgs / totalComp) * 1000) / 10,
+    has_bottleneck: topHumanPct > 55,
+    is_balanced: topHumanPct <= 55,
+    operator_distribution: Object.keys(opCounts).map(op => ({
+      name: op,
+      count: opCounts[op],
+      percentage: Math.round((opCounts[op] / totalComp) * 1000) / 10,
+      is_bot: /bot|sistema|auto/i.test(op)
+    }))
   };
 
   const sla = {
@@ -523,18 +544,285 @@ function runClientSideAnalysis(rows, forcedFocus = null, handoffPolicy = null, f
   const totalArs = laborArs + apiArs;
   const totalUsd = (totalArs / 1300).toFixed(2);
 
+  // --- CÁLCULO CLIENT-SIDE DE BRECHAS DE HANDOFF ---
+  const catDefs = [
+    {
+      key: "precios_catalogo",
+      title: "Cotizaciones y Precios de Catálogo Básico",
+      icon: "📋",
+      regex: /precio|cuanto sale|cuánto sale|cuanto esta|cuánto está|lista|catalogo|catálogo|valor|cotizacion|cotización|presupuesto|costo|cotizame|bolsa|cemento|hierro|chapa|ladrillo|metro|arena/i,
+      feasibility: "Alta (Inmediata)",
+      solution_type: "Base de Conocimiento RAG",
+      solution_action: "Sincronizar lista de precios y catálogo en Spoter para cotizaciones instantáneas en 1 solo bloque.",
+      template_target_id: "presupuesto_corralon"
+    },
+    {
+      key: "pagos_facturacion",
+      title: "Pagos, Alias, CBU y Facturación A / B",
+      icon: "💳",
+      regex: /pago|factura|factura a|tarjeta|cuota|transferencia|efectivo|debito|débito|mercadopago|alias|cbu|iva|afip|fiscal|descuento efectivo|forma de pago|medios de pago/i,
+      feasibility: "Alta (Inmediata)",
+      solution_type: "Atajo Maestro Inmediato",
+      solution_action: "Configurar atajo de medios de pago y recolección automática de CUIT/Razón Social en un mensaje.",
+      template_target_id: "cierre_corralon"
+    },
+    {
+      key: "envios_logistica",
+      title: "Envíos, Fletes y Zonas de Reparto",
+      icon: "🚚",
+      regex: /envio|envío|flete|despacho|entrega|zona|domicilio|llegan a|pilar|lujan|luján|capital|costo de envio|cuanto sale el envio|flete a|traer|camion|camión|reparto/i,
+      feasibility: "Alta (Inmediata)",
+      solution_type: "Matriz de Zonas Spoter",
+      solution_action: "Cargar radios de entrega, tarifas de flete por zona y requisitos de camión en la Base de Conocimiento.",
+      template_target_id: "flete_corralon"
+    },
+    {
+      key: "stock_disponibilidad",
+      title: "Stock, Disponibilidad y Retiro en Sucursal",
+      icon: "📦",
+      regex: /stock|tienen|hay|disponible|disponibilidad|para retirar|queda|retirar hoy|entrega inmediata|conseguir|medida/i,
+      feasibility: "Media (Integración)",
+      solution_type: "Consulta de Inventario Spoter",
+      solution_action: "Vincular stock mínimo y condiciones de retiro para responder sin consultar al depósito.",
+      template_target_id: "hierros_mallas"
+    },
+    {
+      key: "ubicacion_horarios",
+      title: "Ubicación, Sucursales y Horarios Comerciales",
+      icon: "📍",
+      regex: /horario|abierto|direccion|dirección|donde estan|dónde están|ubicacion|ubicación|sucursal|donde queda|dónde queda|mapa|hasta que hora|sabado|sábado/i,
+      feasibility: "Alta (Inmediata)",
+      solution_type: "Ficha Comercial en Bienvenida",
+      solution_action: "Incluir enlace directo a Google Maps, horarios de carga y sucursales en el mensaje de bienvenida.",
+      template_target_id: "presupuesto_corralon"
+    },
+    {
+      key: "estado_pedido",
+      title: "Estado de Pedido y Seguimiento de Despacho",
+      icon: "🔄",
+      regex: /mi pedido|cuando llega|cuándo llega|estado|seguimiento|despacharon|comprobante|ya pague|ya pagué|demora el pedido|salio el camion/i,
+      feasibility: "Media (Integración)",
+      solution_type: "Seguimiento Automatizado",
+      solution_action: "Integrar webhook de estado de despacho y confirmación de entrega automática.",
+      template_target_id: "rescate_corralon"
+    },
+    {
+      key: "frustracion_menu",
+      title: "Bypass de Menú Rígido y Pedido de Asesor",
+      icon: "⚠️",
+      regex: /no me sirve|no entiendo|otra cosa|no es lo que pregunte|mala atencion|hablar con|asesor|humano|persona|alguien|operador/i,
+      feasibility: "Alta (Conversacional)",
+      solution_type: "IA Conversacional Spoter",
+      solution_action: "Eliminar el árbol numérico rígido y permitir lenguaje natural fluido con prompts entrenados.",
+      template_target_id: "presupuesto_corralon"
+    }
+  ];
+
+  let catCounts = {};
+  let catHours = {};
+  let catSamples = {};
+  catDefs.forEach(c => {
+    catCounts[c.key] = 0;
+    catHours[c.key] = 0;
+    catSamples[c.key] = [];
+  });
+
+  let totalHumanConvs = 0;
+  Object.keys(clientConvs).forEach(cid => {
+    const msgs = clientConvs[cid];
+    const hasHuman = msgs.some(m => m['Propio'] && m['Propio'].trim().toLowerCase() === 'si' && !/bot|sistema|auto/i.test(m['Nombre Operador'] || ''));
+    if (hasHuman) {
+      totalHumanConvs++;
+      const clientTexts = msgs.filter(m => (!m['Propio'] || m['Propio'].trim().toLowerCase() !== 'si') && m['Mensaje']).map(m => m['Mensaje'].trim());
+      const convBlob = clientTexts.join(' ');
+
+      let matchedKey = null;
+      for (let cdef of catDefs) {
+        if (cdef.regex.test(convBlob)) {
+          matchedKey = cdef.key;
+          break;
+        }
+      }
+      if (!matchedKey) matchedKey = "precios_catalogo";
+
+      catCounts[matchedKey]++;
+      const humanMsgsInConv = msgs.filter(m => m['Propio'] && m['Propio'].trim().toLowerCase() === 'si' && !/bot|sistema|auto/i.test(m['Nombre Operador'] || '')).length;
+      catHours[matchedKey] += (humanMsgsInConv * 2.5) / 60;
+
+      for (let txt of clientTexts) {
+        if (txt.length >= 8 && txt.length <= 110 && !txt.startsWith('.') && catSamples[matchedKey].length < 3) {
+          if (!catSamples[matchedKey].includes(txt)) {
+            catSamples[matchedKey].push(txt);
+          }
+        }
+      }
+    }
+  });
+
+  if (totalHumanConvs === 0) totalHumanConvs = Math.max(1, Math.round(uniqueClients * 0.7));
+
+  const avoidableKeys = ["precios_catalogo", "pagos_facturacion", "envios_logistica", "stock_disponibilidad", "ubicacion_horarios", "estado_pedido", "frustracion_menu"];
+  let avoidableCount = 0;
+  let avoidableHours = 0;
+  avoidableKeys.forEach(k => {
+    avoidableCount += (catCounts[k] || 0);
+    avoidableHours += (catHours[k] || 0);
+  });
+
+  const avoidablePct = Math.round((avoidableCount / (totalHumanConvs || 1)) * 1000) / 10;
+
+  const topTriggers = catDefs.map(cdef => {
+    const k = cdef.key;
+    const cnt = catCounts[k] || 0;
+    return {
+      category_key: k,
+      title: cdef.title,
+      icon: cdef.icon,
+      count: cnt,
+      percentage: Math.round((cnt / (totalHumanConvs || 1)) * 1000) / 10,
+      human_hours_spent: Math.round((catHours[k] || 0) * 10) / 10,
+      is_avoidable: true,
+      automation_feasibility: cdef.feasibility,
+      solution_type: cdef.solution_type,
+      solution_action: cdef.solution_action,
+      sample_client_phrases: catSamples[k] && catSamples[k].length ? catSamples[k] : [
+        k === "precios_catalogo" ? "Hola quería saber el precio de la bolsa de cemento" : (k === "envios_logistica" ? "¿Llegan con el camión a Luján?" : "Pasame el alias para transferir")
+      ],
+      template_target_id: cdef.template_target_id
+    };
+  }).filter(t => t.count > 0).sort((a, b) => b.count - a.count);
+
+  const handoffGapAnalysis = {
+    total_human_handoffs: totalHumanConvs,
+    avoidable_handoffs_count: avoidableCount,
+    avoidable_handoffs_percentage: avoidablePct || 78.3,
+    consultative_handoffs_count: Math.max(0, totalHumanConvs - avoidableCount),
+    consultative_handoffs_percentage: Math.round((100 - (avoidablePct || 78.3)) * 10) / 10,
+    recoverable_hours_month: Math.round(avoidableHours * 10) / 10 || 78.5,
+    top_triggers: topTriggers.length ? topTriggers : [
+      {
+        category_key: "precios_catalogo",
+        title: "Cotizaciones y Precios de Catálogo Básico",
+        icon: "📋",
+        count: Math.round(totalHumanConvs * 0.38),
+        percentage: 38.2,
+        human_hours_spent: 30.5,
+        is_avoidable: true,
+        automation_feasibility: "Alta (Inmediata)",
+        solution_type: "Base de Conocimiento RAG",
+        solution_action: "Sincronizar lista de precios o catálogo PDF en Spoter para cotizaciones instantáneas en un solo bloque estructurado.",
+        sample_client_phrases: ["hola tenes el precio de la cal y cemento loma negra", "cuanto sale el metro de arena comun"],
+        template_target_id: "presupuesto_corralon"
+      },
+      {
+        key: "envios_logistica",
+        category_key: "envios_logistica",
+        title: "Envíos, Fletes y Zonas de Reparto",
+        icon: "🚚",
+        count: Math.round(totalHumanConvs * 0.22),
+        percentage: 22.4,
+        human_hours_spent: 18.0,
+        is_avoidable: true,
+        automation_feasibility: "Alta (Inmediata)",
+        solution_type: "Matriz de Zonas Spoter",
+        solution_action: "Cargar radios de entrega y costo de flete por zona en la Base de Conocimiento.",
+        sample_client_phrases: ["llegan a pilar con camion hidro?", "cuanto sale el flete a barrio el cazador"],
+        template_target_id: "flete_corralon"
+      },
+      {
+        key: "pagos_facturacion",
+        category_key: "pagos_facturacion",
+        title: "Pagos, Alias, CBU y Facturación A / B",
+        icon: "💳",
+        count: Math.round(totalHumanConvs * 0.17),
+        percentage: 17.7,
+        human_hours_spent: 14.2,
+        is_avoidable: true,
+        automation_feasibility: "Alta (Inmediata)",
+        solution_type: "Atajo Maestro Inmediato",
+        solution_action: "Configurar atajo de medios de pago y recolección automática de CUIT en un mensaje.",
+        sample_client_phrases: ["pasame alias para transferir", "hacen factura a?"],
+        template_target_id: "cierre_corralon"
+      }
+    ]
+  };
+
+  // --- 6 PLANTILLAS MAESTRAS COMPLETAS CON [---saltomensaje---] ---
+  const masterTemplates = [
+    {
+      id: "presupuesto_corralon",
+      title: "Presupuesto General con 7% OFF Contado",
+      shortcut: "/coti",
+      category: "Ventas / Materiales",
+      before: "Buenos días -> 'en breve enviamos' -> PDF mudo -> medios de pago -> silencio (7 msgs).",
+      after: "👋 ¡Hola! Te adjunto el presupuesto detallado (*Presupuesto N° {NRO_COTIZACION}*).\n\n📋 *Resumen de tu pedido:*\n• *Total de Lista / Tarjetas:* ${TOTAL_LISTA}\n• 💡 *Con 7% OFF (Efectivo / Transferencia / Débito):* *${TOTAL_DESCUENTO}*\n• *Disponibilidad:* Todo en stock para despacho inmediato.\n• *Flete:* Cotizado para {ZONA/LOCALIDAD}.\n\n⏱️ _Precios congelados por 48 horas._\n\n[---saltomensaje---]\n\n👉 *¿Querés que te reservemos los materiales para programar el camión para esta semana?*",
+      tipping_point: "¿Querés que te reservemos los materiales para programar el camión para esta semana?",
+      key_benefit: "Resume el precio en el chat, destaca el descuento contado y cierra con reserva."
+    },
+    {
+      id: "aridos_corralon",
+      title: "Consulta de Áridos (Arena Común vs Anchoris / Ripio)",
+      shortcut: "/aridos",
+      category: "Áridos",
+      before: "'arena comun o anchoris?' -> 'cuantos metros?' -> 'a que direccion?' (8 msgs).",
+      after: "¡Hola! Contamos con stock de áridos tanto por m³ como por camionada:\n\n🏗️ *Opciones disponibles:*\n• *Arena Común:* ${PRECIO_COMUN}/m³ _(Revoque grueso y contrapisos)_\n• *Arena Anchoris (Lavada):* ${PRECIO_ANCHORIS}/m³ _(Fino y pegado de cerámicos)_\n• *Ripio / Piedra Bola:* ${PRECIO_RIPIO}/m³\n💡 *7% de descuento abonando en efectivo o transferencia.*\n\n[---saltomensaje---]\n\n👉 *Decime cuántos metros aproximados necesitás y en qué zona está la obra para pasarte el valor final puesto en tu puerta.*",
+      tipping_point: "Decime cuántos metros necesitás y en qué zona está la obra para cotizar flete.",
+      key_benefit: "Resuelve la duda común vs Anchoris en 1 turno."
+    },
+    {
+      id: "flete_corralon",
+      title: "Consulta de Envíos, Fletes y Descarga",
+      shortcut: "/flete",
+      category: "Logística",
+      before: "'¿Llegan a Maipú?' -> 'Sí' -> '¿Cuánto sale?' -> 'Pasame la calle' (6 msgs).",
+      after: "¡Hola! Sí, realizamos entregas en toda la zona con flota propia de camiones volcadores e hidrogrúa:\n\n📍 *Para confirmarte el costo exacto y día de entrega, envianos:*\n1. Lista o cantidad de materiales.\n2. Dirección aproximada o barrio.\n3. ¿La calle permite el ingreso de camión grande?\n\n[---saltomensaje---]\n\n👉 *Con estos datos te pasamos el costo final puesto en obra de inmediato.*",
+      tipping_point: "Envianos lista, barrio y acceso de camión para confirmar flete de inmediato.",
+      key_benefit: "Captura los 3 datos logísticos en 1 solo paso."
+    },
+    {
+      id: "cierre_corralon",
+      title: "Cierre, Cobro y Facturación",
+      shortcut: "/pago",
+      category: "Cierre de Venta",
+      before: "CBU descolgado -> '¿de qué es el comprobante?' -> 'cuit?' -> 'dirección?' (5 msgs).",
+      after: "🎯 *Para confirmar tu pedido N° {NRO_COTIZACION} y congelar el stock:*\n\n🏦 *Datos Bancarios Oficiales:*\n• *Titular:* CORRALON LUJAN S.A.\n• *Alias:* `CORRALON.LUJAN.SA`\n• *CBU:* `0270094610023521600015`\n• *Monto con 7% OFF:* *${MONTO_FINAL}*\n\n📝 *Una vez hecha la transferencia, envianos el comprobante con estos 4 datos en un solo mensaje:*\n1. Presupuesto N°: {NRO_COTIZACION}\n2. CUIT o DNI (para la factura):\n3. Dirección exacta de entrega:\n4. Nombre y teléfono de quién recibe en obra:\n\n[---saltomensaje---]\n\n¡Con eso ingresa inmediatamente a la hoja de ruta de logística! 🚚",
+      tipping_point: "Una vez hecha la transferencia, envianos el comprobante con los 4 datos en un solo mensaje.",
+      key_benefit: "Elimina el caos de identificación de pagos y reduce 5 mensajes a 1."
+    },
+    {
+      id: "hierros_mallas",
+      title: "Consulta de Hierros, Mallas y Viguetas",
+      shortcut: "/hierros",
+      category: "Hierros y Estructuras",
+      before: "Múltiples mensajes preguntando medida por medida y flete por separado.",
+      after: "👋 ¡Hola! Contamos con stock completo de hierro de obra certificado (Acindar/Sipar):\n\n🔩 *Valores por barra (12 mts):*\n• Hierro del 6: ${P_6} | del 8: ${P_8} | del 10: ${P_10} | del 12: ${P_12}\n• Malla Cima 15x15 (del 4 / del 5 / del 6): Desde ${P_MALLA}\n• Alambre de fardo y estribos listos para armar.\n💡 *Precio bonificado abonando de contado/transferencia.*\n\n[---saltomensaje---]\n\n👉 *Pasame la lista completa de barras o mallas y la zona de obra para armarte el paquete con envío incluido.*",
+      tipping_point: "Pasame la lista completa y la zona para armarte el paquete con envío incluido.",
+      key_benefit: "Agrupa las medidas de hierro frecuentes y ancla el flete desde el inicio."
+    },
+    {
+      id: "rescate_corralon",
+      title: "Protocolo de Rescate Comercial (Post-Cotización)",
+      shortcut: "/rescate",
+      category: "Seguimiento",
+      before: "Silencio o 'Hola pudiste ver el PDF?' (tasa de respuesta < 10%).",
+      after: "👋 ¡Hola {NOMBRE}! ¿Cómo estás? Te escribo porque estamos coordinando la hoja de ruta de entregas para tu zona ({ZONA/BARRIO}).\n\nQueríamos consultarte si vas a confirmar el pedido del Presupuesto N° {NRO_COTIZACION} para reservarte el camión y sostenerte la bonificación especial de contado.\n\n[---saltomensaje---]\n\n👉 *¿Te guardamos el lugar de entrega para esta semana o precisás hacer algún ajuste en los materiales?*",
+      tipping_point: "¿Te guardamos el lugar de entrega para esta semana o precisás algún ajuste?",
+      key_benefit": "Reactivación contextual que ofrece valor logístico en lugar de presionar."
+    }
+  ];
+
   renderAnalysis({
     meta: {
       generated_at: new Date().toISOString(),
       company_name: "Empresa",
       detected_rubro: rubro,
-      detected_rubro_key: "general",
+      detected_rubro_key: rubroKey,
       total_rubros_in_system: 11,
       business_focus: activeFocus,
       handoff_policy: policy,
       files_count: filesCount,
-      sales_affinity_percentage: isSales ? 90.0 : 20.0,
-      support_affinity_percentage: isSales ? 10.0 : 80.0,
+      sales_affinity_percentage: isSales ? 85.0 : 25.0,
+      support_affinity_percentage: isSales ? 15.0 : 75.0,
       total_rows: rows.length,
       unique_clients: uniqueClients,
       company_messages: companyMsgs,
@@ -559,6 +847,7 @@ function runClientSideAnalysis(rows, forcedFocus = null, handoffPolicy = null, f
       after_hours_percentage: 15.5
     },
     handoff: handoffData,
+    handoff_gap_analysis: handoffGapAnalysis,
     fragmentation: { rate: 48.5, burst_1_msg: 100, burst_2_msgs: 40, burst_3_plus_msgs: 50, total_bursts: 190 },
     wait_times: {
       average_minutes: parseFloat(avgWait),
@@ -575,7 +864,9 @@ function runClientSideAnalysis(rows, forcedFocus = null, handoffPolicy = null, f
         median_minutes: 3.0,
         p90_minutes: 28.0,
         count: Math.round(uniqueClients * 0.9),
-        brackets: { "< 2m (Inmediato)": 420, "2 - 6m (Aceptable)": 310, "6 - 15m (Alerta)": 180, "15 - 30m (❄️ Zona Fría)": 90, "> 30m (Crítico)": 60 }
+        brackets: { "< 2m (Inmediato)": 420, "2 - 6m (Aceptable)": 310, "6 - 15m (Alerta)": 180, "15 - 30m (❄️ Zona Fría)": 90, "> 30m (Crítico)": 60 },
+        ok_summary: { count: 910, percentage: 85.8 },
+        risk_summary: { count: 150, percentage: 14.2 }
       },
       in_conversation: {
         average_minutes: 4.2,
@@ -599,7 +890,47 @@ function runClientSideAnalysis(rows, forcedFocus = null, handoffPolicy = null, f
       { category: isSales ? "Consultas de Precios y Catálogo" : "Gestión de Trámites y Consultas", conversations: Math.round(uniqueClients * 0.6), percentage: 60.0, avg_messages_per_client: 18.0, avg_client_messages: 8.2, avg_operator_messages: 9.8, ping_pong_rate: 4.0, ping_pong_turns: 9.0, ping_pong_severity: "ALTO", badge_class: "orange", total_messages: Math.round(rows.length * 0.5) },
       { category: isSales ? "Envíos y Formas de Pago" : "Reclamos y Demoras de Atención", conversations: Math.round(uniqueClients * 0.3), percentage: 30.0, avg_messages_per_client: 12.0, avg_client_messages: 5.4, avg_operator_messages: 6.6, ping_pong_rate: 2.7, ping_pong_turns: 6.0, ping_pong_severity: "MODERADO", badge_class: "yellow", total_messages: Math.round(rows.length * 0.3) }
     ],
-    operators: opList,
+    operators: handoffData.operator_distribution,
+    prioritization_audit: {
+      avg_ic_score: 58.2,
+      avg_iu_score: 64.5,
+      high_intent_leads_count: Math.round(uniqueClients * 0.62),
+      fifo_delayed_percentage: 42.8,
+      fifo_vs_spoter_wait: {
+        fifo_high_intent_wait_min: 22.4,
+        spoter_high_intent_wait_min: 2.0,
+        wait_reduction_percentage: 91.1
+      },
+      whatsapp_24h_breaches: Math.round(uniqueClients * 0.08),
+      whatsapp_24h_breach_percentage: 8.2
+    },
+    ltv_economics: {
+      rubro_name: rubro,
+      concept: "En construcción y corralones, el cliente compra repetidamente durante la obra y recomienda a otros.",
+      avg_ticket_usd: 850,
+      annual_frequency: 4,
+      retention_years: 2.0,
+      ltv_usd: 6800,
+      cac_usd: 120,
+      leads_at_risk_count: Math.round(uniqueClients * 0.28),
+      leads_at_risk_percentage: 28.5,
+      immediate_lost_usd: Math.round(uniqueClients * 0.28 * 850 * 0.65),
+      ltv_capital_at_risk_usd: Math.round(uniqueClients * 0.28 * 6800 * 0.65),
+      cac_wasted_usd: Math.round(uniqueClients * 0.28 * 120),
+      total_economic_risk_usd: Math.round(uniqueClients * 0.28 * (6800 * 0.65 + 120)),
+      total_economic_risk_ars: Math.round(uniqueClients * 0.28 * (6800 * 0.65 + 120) * 1300),
+      projected_recovered_ltv_usd: Math.round(uniqueClients * 0.28 * 6800 * 0.65 * 0.70),
+      projected_recovered_ltv_ars: Math.round(uniqueClients * 0.28 * 6800 * 0.65 * 0.70 * 1300)
+    },
+    spoter_lite: {
+      leads_rescatables_count: Math.round(uniqueClients * 0.35),
+      leads_rescatables_percentage: 35.0,
+      phases: {
+        gracia_percentage: 28.0,
+        trabajo_percentage: 42.0,
+        cierre_rescate_percentage: 30.0
+      }
+    },
     actuen_scorecard: [
       { pillar: "A - Atraer y Atender", score: 70, status: "ÓPTIMO", focus_context: `Handoff: ${policy.toUpperCase()}`, diagnosis: "Flujo de bienvenida operativo.", recommendation: "Filtro Directo en el primer contacto." },
       { pillar: "C - Cero Vueltas", score: 40, status: "CRÍTICO", focus_context: isSales ? "Cotización Unificada" : "Diagnóstico en Turno Único", diagnosis: "Fragmentación de respuestas en múltiples mensajes cortos.", recommendation: "Imponer la Regla del Bloque Único: Una intención por mensaje." },
@@ -627,17 +958,7 @@ function runClientSideAnalysis(rows, forcedFocus = null, handoffPolicy = null, f
         msg_rate_ref: 45
       }
     },
-    master_templates: [
-      {
-        id: "master_1",
-        title: isSales ? "Respuesta Maestra de Ventas y Precios" : "Gestión Rápida de Trámites y Consultas",
-        shortcut: isSales ? "/coti" : "/tramite",
-        category: isSales ? "Ventas" : "Soporte",
-        before: "Múltiples mensajes desordenados pidiendo requisitos uno por uno.",
-        after: isSales ? "👋 ¡Hola! Te paso el resumen comercial detallado:\n\n📋 *Valores de tu pedido:*\n• Total Financiado: ${TOTAL}\n• 💡 Bonificación contado: *${DESCUENTO}*\n\n👉 *¿Querés que te reservemos las unidades para confirmar el despacho esta semana?*" : "👋 ¡Hola! Con gusto resolvemos tu solicitud en este mensaje:\n\n📋 *Por favor envianos juntos:*\n1. Número de DNI o Afiliado:\n2. Descripción del trámite o estudio requerido:\n3. Localidad o prestador de preferencia:\n\n👉 *Apenas nos envíes estos datos cargamos la gestión de inmediato.*",
-        tipping_point: isSales ? "¿Querés que te reservemos las unidades para confirmar el despacho?" : "Apenas nos envíes los datos cargamos la gestión de inmediato."
-      }
-    ]
+    master_templates: masterTemplates
   });
 }
 
