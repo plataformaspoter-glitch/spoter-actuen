@@ -185,7 +185,7 @@ function initExecutiveControls() {
               template_target_id: c.template_target_id
             };
           });
-          renderHandoffGaps(currentData.handoff_gap_analysis);
+          renderHandoffGapAnalysis(currentData.handoff_gap_analysis);
         }
 
         renderTemplates(currentData.master_templates, isSales);
@@ -1385,6 +1385,27 @@ function processFilesClientSide(files, forcedFocus = null, handoffPolicy = null,
 }
 
 function runClientSideAnalysis(rows, forcedFocus = null, handoffPolicy = null, filesCount = 1, forcedRubro = null) {
+  // Normalizar encabezados de columnas (minúsculas, guiones, variaciones)
+  rows = (rows || []).map(raw => {
+    const clean = {};
+    for (const [k, v] of Object.entries(raw || {})) {
+      if (!k) continue;
+      const ck = k.trim().replace(/"/g, '');
+      const cv = (v !== null && v !== undefined) ? String(v).trim() : '';
+      clean[ck] = cv;
+      const kLow = ck.toLowerCase().replace(/[\s-]/g, '_');
+      if (['mensaje', 'message', 'text', 'body'].includes(kLow)) clean['Mensaje'] = cv;
+      else if (['numero', 'número', 'phone', 'telefono', 'teléfono', 'from', 'remitente'].includes(kLow)) clean['Número'] = cv;
+      else if (['destinatario', 'to', 'recipient'].includes(kLow)) clean['Destinatario'] = cv;
+      else if (['propio', 'is_from_me', 'from_me', 'saliente'].includes(kLow)) clean['Propio'] = cv;
+      else if (['tiempo_espera', 'tiempo_de_espera', 'espera', 'wait_time'].includes(kLow)) clean['Tiempo Espera'] = cv;
+      else if (['nombre_operador', 'operador', 'agent', 'asesor'].includes(kLow)) clean['Nombre Operador'] = cv;
+      else if (['fecha_hora', 'fecha', 'timestamp', 'datetime', 'date'].includes(kLow)) clean['Fecha_Hora'] = cv;
+      else if (['nombre', 'name', 'client_name', 'contacto'].includes(kLow)) clean['Nombre'] = cv;
+    }
+    return clean;
+  });
+
   let companyMsgs = 0;
   let clientMsgs = 0;
   let clientConvs = {};
@@ -3543,6 +3564,10 @@ Generado por el Analizador Spoter ACTÚEN+.`;
 
 
 // --- AUDITORÍA DE BRECHAS DE AUTOMATIZACIÓN & DISPARADORES DE HANDOFF ---
+function renderHandoffGaps(gap) {
+  renderHandoffGapAnalysis(gap);
+}
+
 function renderHandoffGapAnalysis(gap) {
   const panel = document.getElementById('handoffGapPanel');
   if (!panel) return;

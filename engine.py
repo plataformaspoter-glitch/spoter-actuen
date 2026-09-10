@@ -279,7 +279,31 @@ class ActuenAnalyzer:
                 delimiter = ';' if ';' in sample else ','
                 reader = csv.DictReader(f, delimiter=delimiter)
                 for r in reader:
-                    clean_row = {k.strip().replace('"', ''): (v.strip() if v else '') for k, v in r.items() if k}
+                    clean_row = {}
+                    for k, v in r.items():
+                        if not k:
+                            continue
+                        clean_k = k.strip().replace('"', '')
+                        clean_v = v.strip() if v else ''
+                        clean_row[clean_k] = clean_v
+
+                        k_lower = clean_k.lower().replace(' ', '_').replace('-', '_')
+                        if k_lower in ('mensaje', 'message', 'text', 'body'):
+                            clean_row['Mensaje'] = clean_v
+                        elif k_lower in ('numero', 'número', 'phone', 'telefono', 'teléfono', 'from', 'remitente'):
+                            clean_row['Número'] = clean_v
+                        elif k_lower in ('destinatario', 'to', 'recipient'):
+                            clean_row['Destinatario'] = clean_v
+                        elif k_lower in ('propio', 'is_from_me', 'from_me', 'saliente'):
+                            clean_row['Propio'] = clean_v
+                        elif k_lower in ('tiempo_espera', 'tiempo_de_espera', 'espera', 'wait_time'):
+                            clean_row['Tiempo Espera'] = clean_v
+                        elif k_lower in ('nombre_operador', 'operador', 'agent', 'asesor'):
+                            clean_row['Nombre Operador'] = clean_v
+                        elif k_lower in ('fecha_hora', 'fecha', 'timestamp', 'datetime', 'date'):
+                            clean_row['Fecha_Hora'] = clean_v
+                        elif k_lower in ('nombre', 'name', 'client_name', 'contacto'):
+                            clean_row['Nombre'] = clean_v
                     all_rows.append(clean_row)
         return all_rows
 
@@ -511,11 +535,18 @@ class ActuenAnalyzer:
         in_conv_wait_times.sort()
         wait_times.sort()
 
-        n_wt = len(wait_times) or 1
-        avg_wait = sum(wait_times) / n_wt
-        med_wait = wait_times[n_wt // 2]
-        p90_wait = wait_times[int(n_wt * 0.9)]
-        p95_wait = wait_times[int(n_wt * 0.95)]
+        if wait_times:
+            n_wt = len(wait_times)
+            avg_wait = sum(wait_times) / n_wt
+            med_wait = wait_times[n_wt // 2]
+            p90_wait = wait_times[int(n_wt * 0.9)]
+            p95_wait = wait_times[int(n_wt * 0.95)]
+        else:
+            n_wt = 1
+            avg_wait = 0.0
+            med_wait = 0.0
+            p90_wait = 0.0
+            p95_wait = 0.0
 
         sla = rubro_info['sla']
         t_imm = sla['ideal_immediate']
