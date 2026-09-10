@@ -274,15 +274,19 @@ async function loadDataset(forcedRubro = null, forcedFocus = null, handoffPolicy
   if (btn) btn.disabled = true;
   showToast("⏳ Spoter: Procesando lote de prueba y analizando intenciones...");
   
-  try {
-    const selectFocus = document.getElementById('selectFocus');
-    const selectHandoff = document.getElementById('selectHandoff');
-    const rVal = forcedRubro || (currentData && currentData.meta ? currentData.meta.detected_rubro_key : '');
-    const fVal = forcedFocus || (selectFocus && selectFocus.value === 'auto' ? '' : (selectFocus ? selectFocus.value : ''));
-    const savedHandoff = localStorage.getItem('spoter_handoff_policy');
-    const hVal = handoffPolicy || savedHandoff || (selectHandoff ? selectHandoff.value : 'hybrid');
-    localStorage.setItem('spoter_handoff_policy', hVal);
+  // Estos valores se declaran FUERA del try porque el catch —que contiene el
+  // fallback a sample_data.json— también los usa. Declarados con const dentro
+  // del try quedaban fuera de alcance y el fallback moría con un ReferenceError,
+  // que el catch externo se tragaba: sin motor, el botón no hacía nada.
+  const selectFocus = document.getElementById('selectFocus');
+  const selectHandoff = document.getElementById('selectHandoff');
+  const rVal = forcedRubro || (currentData && currentData.meta ? currentData.meta.detected_rubro_key : '');
+  const fVal = forcedFocus || (selectFocus && selectFocus.value === 'auto' ? '' : (selectFocus ? selectFocus.value : ''));
+  const savedHandoff = localStorage.getItem('spoter_handoff_policy');
+  const hVal = handoffPolicy || savedHandoff || (selectHandoff ? selectHandoff.value : 'hybrid');
+  localStorage.setItem('spoter_handoff_policy', hVal);
 
+  try {
     let url = `/api/analyze-default?handoff=${hVal}`;
     if (fVal) url += `&focus=${fVal}`;
     if (rVal) url += `&rubro=${rVal}`;
@@ -1384,6 +1388,268 @@ function processFilesClientSide(files, forcedFocus = null, handoffPolicy = null,
   }
 }
 
+/** Muestra un error de interpretación del CSV en lugar de un informe vacío. */
+function showParseError(motivos, columnas, filas) {
+  const panel = document.getElementById('dropzonePanel');
+  const html = `
+    <div class="engine-notice" style="border-color: var(--danger, #ef4444);">
+      <div class="engine-notice-icon">⚠️</div>
+      <div class="engine-notice-body">
+        <h4>El CSV se leyó pero no pudo interpretarse</h4>
+        <p>Se leyeron <strong>${filas.toLocaleString()}</strong> filas, pero ${motivos.map(escapeHtml).join('; ')}.</p>
+        <p><strong>Columnas detectadas:</strong> ${columnas.map(escapeHtml).join(', ') || '(ninguna)'}</p>
+        <p class="engine-notice-cta">Revisá que el archivo sea una exportación de conversaciones con una columna que indique la dirección del mensaje.</p>
+      </div>
+    </div>`;
+  if (panel) {
+    let box = document.getElementById('parseErrorBox');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'parseErrorBox';
+      box.style.marginTop = '18px';
+      panel.appendChild(box);
+    }
+    box.innerHTML = html;
+  }
+  showToast('⚠️ No se pudo interpretar el CSV — revisá las columnas');
+}
+
+// --- Métricas derivadas del CSV (espejo de engine.py) ------------------------
+// Los índices de percentil, el conteo de ráfagas y las franjas de SLA replican
+// la semántica del motor Python para que ambos den el mismo número.
+
+/** Percentil por índice truncado, igual que w_list[int(n * q)] en Python. */
+function percentileAt(sortedList, q) {
+  if (!sortedList.length) return 0.0;
+  const idx = Math.min(sortedList.length - 1, Math.floor(sortedList.length * q));
+  return sortedList[idx];
+}
+
+function round1(n) { return Math.round(n * 10) / 10; }
+
+/** Espejo de calc_brackets(): promedio, percentiles, franjas y resúmenes. */
+function calcBrackets(list, sla) {
+  const w = [...list].sort((a, b) => a - b);
+  const nw = w.length || 1;
+  const tImm = sla.ideal_immediate, tAcc = sla.acceptable;
+  const tWarn = sla.warning, tCrit = sla.critical;
+
+  const bImm  = w.filter(x => x <= tImm).length;
+  const bAcc  = w.filter(x => x > tImm && x <= tAcc).length;
+  const bWarn = w.filter(x => x > tAcc && x <= tWarn).length;
+  const bCold = w.filter(x => x > tWarn && x <= tCrit).length;
+  const bCrit = w.filter(x => x > tCrit).length;
+
+  const okCount = bImm + bAcc + bWarn;
+  const riskCount = bCold + bCrit;
+  const f = n => Math.round(n);
+
+  return {
+    average_minutes: w.length ? round1(w.reduce((a, b) => a + b, 0) / nw) : 0.0,
+    median_minutes: w.length ? round1(w[Math.floor(nw / 2)]) : 0.0,
+    p90_minutes: w.length ? round1(percentileAt(w, 0.9)) : 0.0,
+    p95_minutes: w.length ? round1(percentileAt(w, 0.95)) : 0.0,
+    count: w.length,
+    over_warning_count: riskCount,
+    over_warning_percentage: round1((riskCount / nw) * 100),
+    ok_summary: {
+      count: okCount,
+      percentage: round1((okCount / nw) * 100),
+      label: "Atención Oportuna / Saludable (3 Franjas)"
+    },
+    risk_summary: {
+      count: riskCount,
+      percentage: round1((riskCount / nw) * 100),
+      label: "Zona de Riesgo / Fuga (2 Franjas)"
+    },
+    brackets: {
+      [`< ${f(tImm)}m (Inmediato)`]: bImm,
+      [`${f(tImm)} - ${f(tAcc)}m (Aceptable)`]: bAcc,
+      [`${f(tAcc)} - ${f(tWarn)}m (Alerta)`]: bWarn,
+      [`${f(tWarn)} - ${f(tCrit)}m (❄️ Zona Fría)`]: bCold,
+      [`> ${f(tCrit)}m (Crítico)`]: bCrit
+    }
+  };
+}
+
+/** Ordena cada conversación por fecha, en sitio. Espejo del msgs.sort() del motor. */
+function sortConversationsByDate(clientConvs) {
+  Object.keys(clientConvs).forEach(cid => {
+    clientConvs[cid].sort((a, b) => {
+      const da = parseDate(a['Fecha_Hora']);
+      const db = parseDate(b['Fecha_Hora']);
+      return (da ? da.getTime() : -Infinity) - (db ? db.getTime() : -Infinity);
+    });
+  });
+}
+
+/**
+ * Ráfagas de mensajes consecutivos de la empresa (infracción a Cero Vueltas).
+ * Una ráfaga se cierra cuando responde el cliente. Cada mensaje cuenta según
+ * sus divisiones por [---saltomensaje---], igual que en el motor.
+ */
+function computeBursts(clientConvs, splitRegex) {
+  const burstSizes = [];
+  Object.keys(clientConvs).forEach(cid => {
+    let cur = 0;
+    for (const m of clientConvs[cid]) {
+      if (isPropio(m)) {
+        const txt = m['Mensaje'] || '';
+        const parts = txt ? txt.split(splitRegex).filter(x => x.trim()) : [];
+        cur += Math.max(1, parts.length);
+      } else if (cur > 0) {
+        burstSizes.push(cur);
+        cur = 0;
+      }
+    }
+    if (cur > 0) burstSizes.push(cur);
+  });
+
+  const total = burstSizes.length || 1;
+  const b1 = burstSizes.filter(b => b === 1).length;
+  const b2 = burstSizes.filter(b => b === 2).length;
+  const b3 = burstSizes.filter(b => b >= 3).length;
+  return {
+    rate: round1(((b2 + b3) / total) * 100),
+    burst_1_msg: b1,
+    burst_2_msgs: b2,
+    burst_3_plus_msgs: b3,
+    total_bursts: burstSizes.length
+  };
+}
+
+/** Distribución horaria y semanal del PRIMER contacto de cada conversación. */
+function computeSchedule(clientConvs, uniqueClients) {
+  const hourly = new Array(24).fill(0);
+  const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+  const weekdays = {};
+  dayNames.forEach(d => { weekdays[d] = 0; });
+  let biz = 0, after = 0, conFecha = 0;
+
+  Object.keys(clientConvs).forEach(cid => {
+    const msgs = clientConvs[cid];
+    if (!msgs.length) return;
+    const first = parseDate(msgs[0]['Fecha_Hora']);
+    if (!first) return;
+    conFecha++;
+    const h = first.getHours();
+    // getDay(): domingo=0. weekday() de Python: lunes=0.
+    const w = (first.getDay() + 6) % 7;
+    hourly[h]++;
+    weekdays[dayNames[w]]++;
+    const esLaboral = (w < 5 && h >= 8 && h < 18) || (w === 5 && h >= 8 && h < 13);
+    if (esLaboral) biz++; else after++;
+  });
+
+  // Sin ninguna fecha reconocible no se inventa una curva.
+  if (conFecha === 0) return null;
+
+  const maxH = Math.max(...hourly);
+  const peakHourIdx = maxH > 0 ? hourly.indexOf(maxH) : 10;
+  const peakDay = Object.keys(weekdays).reduce((a, b) => weekdays[b] > weekdays[a] ? b : a, dayNames[0]);
+  const pad = n => String(n).padStart(2, '0');
+
+  const topPeakHours = hourly
+    .map((count, hour) => ({ hour, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3)
+    .map(({ hour, count }) => ({
+      hour,
+      hour_range: `${pad(hour)}:00 a ${pad(hour + 1)}:00 hs`,
+      count,
+      percentage: round1((count / (uniqueClients || 1)) * 100)
+    }));
+
+  return {
+    hourly,
+    weekdays,
+    peak_hour: `${pad(peakHourIdx)}:00 a ${pad(peakHourIdx + 1)}:00 hs`,
+    peak_day: peakDay,
+    top_peak_hours: topPeakHours,
+    peak_hours_summary: topPeakHours.map(p => `${p.hour_range.split(' ')[0]} hs (${p.percentage}%)`).join(' | '),
+    business_hours_percentage: round1((biz / (uniqueClients || 1)) * 100),
+    after_hours_percentage: round1((after / (uniqueClients || 1)) * 100),
+    first_contacts_with_date: conFecha
+  };
+}
+
+/**
+ * Separa la espera de la PRIMERA respuesta de la empresa de las siguientes.
+ * El "primer" turno solo se consume con un mensaje de empresa que además traiga
+ * un tiempo de espera parseable, igual que en el motor.
+ */
+function splitWaitTimes(clientConvs) {
+  const initial = [], inConv = [];
+  Object.keys(clientConvs).forEach(cid => {
+    let firstSeen = false;
+    for (const m of clientConvs[cid]) {
+      const te = String(m['Tiempo Espera'] || '').trim();
+      if (!te) continue;
+      const val = parseFloat(te);
+      if (isNaN(val)) continue;
+      if (!isPropio(m)) continue;
+      if (!firstSeen) { initial.push(val); firstSeen = true; }
+      else { inConv.push(val); }
+    }
+  });
+  return { initial, inConv };
+}
+
+// --- Normalización de valores de entrada -------------------------------------
+// Espejo de is_propio() / parse_datetime() de engine.py. Los encabezados se
+// normalizan aparte; acá se normalizan los VALORES, que varían por plataforma.
+
+const TRUTHY_PROPIO = new Set([
+  'si', 'sí', 'yes', 'y', 'true', 't', '1',
+  'out', 'outgoing', 'saliente', 'enviado', 'empresa', 'me'
+]);
+
+/** True si el mensaje lo envió la empresa. Acepta un row o un valor suelto. */
+function isPropio(rowOrValue) {
+  const v = (rowOrValue && typeof rowOrValue === 'object') ? rowOrValue['Propio'] : rowOrValue;
+  return TRUTHY_PROPIO.has(String(v == null ? '' : v).trim().toLowerCase());
+}
+
+/** Parsea una fecha de CSV. Devuelve null si no reconoce el formato. */
+function parseDate(value) {
+  const raw = String(value == null ? '' : value).trim();
+  if (!raw) return null;
+
+  // ISO-8601
+  if (raw.slice(0, 11).includes('T')) {
+    const d = new Date(raw);
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // dd/mm/aa(aa) hh:mm(:ss) y dd-mm-aaaa
+  let m = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})[\s,]+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (m) {
+    let [, dd, mm, yy, hh, mi, ss] = m;
+    let year = parseInt(yy, 10);
+    if (year < 100) year += 2000;
+    const d = new Date(year, parseInt(mm, 10) - 1, parseInt(dd, 10),
+                       parseInt(hh, 10), parseInt(mi, 10), parseInt(ss || '0', 10));
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // aaaa-mm-dd hh:mm(:ss)
+  m = raw.match(/^(\d{4})-(\d{2})-(\d{2})[\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (m) {
+    const [, y, mo, dd, hh, mi, ss] = m;
+    const d = new Date(+y, +mo - 1, +dd, +hh, +mi, parseInt(ss || '0', 10));
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // Epoch en segundos o milisegundos
+  if (/^\d{10,13}$/.test(raw)) {
+    let n = parseInt(raw, 10);
+    if (n > 10000000000) n = Math.floor(n / 1000);
+    if (n > 946684800 && n < 4102444800) return new Date(n * 1000);
+  }
+
+  return null;
+}
+
 function runClientSideAnalysis(rows, forcedFocus = null, handoffPolicy = null, filesCount = 1, forcedRubro = null) {
   // Normalizar encabezados de columnas (minúsculas, guiones, variaciones)
   rows = (rows || []).map(raw => {
@@ -1416,7 +1682,7 @@ function runClientSideAnalysis(rows, forcedFocus = null, handoffPolicy = null, f
   const splitRegex = /\s*\[?-*salto[-_]?mensaje-*\]?\s*/i;
 
   rows.forEach(r => {
-    const propio = (r['Propio'] || '').trim().toLowerCase() === 'si';
+    const propio = isPropio(r);
     const msg = (r['Mensaje'] || '').trim();
     if (propio) {
       const splitParts = msg ? msg.split(splitRegex).filter(p => p.trim()) : [];
@@ -1443,12 +1709,29 @@ function runClientSideAnalysis(rows, forcedFocus = null, handoffPolicy = null, f
     if (te && !isNaN(parseFloat(te))) waitTimes.push(parseFloat(te));
   });
 
-  const uniqueClients = Object.keys(clientConvs).length || 1;
+  const realUniqueClients = Object.keys(clientConvs).length;
+
+  // Validación dura: espejo de la de engine.py. Un mapeo fallido daba antes un
+  // informe vacío pero verosímil; ahora avisa qué columna hay que revisar.
+  if (companyMsgs === 0 || realUniqueClients === 0) {
+    const columnas = [...new Set(rows.slice(0, 50).flatMap(r => Object.keys(r)))].sort();
+    const motivos = [];
+    if (companyMsgs === 0) {
+      motivos.push("no se identificó ningún mensaje enviado por la empresa (la columna 'Propio' debe valer Si/true/1/out en los salientes)");
+    }
+    if (realUniqueClients === 0) {
+      motivos.push("no se identificó ningún cliente (faltan las columnas 'Número' y/o 'Destinatario')");
+    }
+    showParseError(motivos, columnas, rows.length);
+    return;
+  }
+
+  const uniqueClients = realUniqueClients || 1;
 
   // Detección dinámica del nombre de la empresa a partir de los datos subidos
   const destCounts = {};
   rows.forEach(r => {
-    if ((r['Propio'] || '').trim().toLowerCase() !== 'si') {
+    if (!isPropio(r)) {
       const d = (r['Destinatario'] || '').trim();
       if (d && !/bot|sistema|auto/i.test(d) && isNaN(Number(d)) && d.length > 2) {
         destCounts[d] = (destCounts[d] || 0) + 1;
@@ -1562,16 +1845,21 @@ function runClientSideAnalysis(rows, forcedFocus = null, handoffPolicy = null, f
     benchmark_text: `SLA de referencia para ${rubro}.`
   };
 
-  const brackets = {
-    "< 2m (Inmediato)": waitTimes.filter(w => w <= 2).length,
-    "2 - 6m (Aceptable)": waitTimes.filter(w => w > 2 && w <= 6).length,
-    "6 - 15m (Alerta)": waitTimes.filter(w => w > 6 && w <= 15).length,
-    "15 - 30m (Zona Azul)": waitTimes.filter(w => w > 15 && w <= 30).length,
-    "> 30m (Crítico)": waitTimes.filter(w => w > 30).length
-  };
+  // --- Métricas reales derivadas del CSV (Fase 3) ---
+  // Las conversaciones se ordenan por fecha una sola vez; ráfagas, horarios y
+  // el desglose de esperas dependen de ese orden.
+  sortConversationsByDate(clientConvs);
 
-  const avgWait = waitTimes.length ? (waitTimes.reduce((a,b) => a+b, 0) / waitTimes.length).toFixed(1) : "0.0";
+  const globalStats = calcBrackets(waitTimes, sla);
+  const brackets = globalStats.brackets;
+  const avgWait = globalStats.average_minutes.toFixed(1);
   const overWarn = waitTimes.filter(w => w > sla.warning).length;
+
+  const fragmentationStats = computeBursts(clientConvs, splitRegex);
+  const scheduleStats = computeSchedule(clientConvs, uniqueClients);
+  const { initial: initialWaits, inConv: inConvWaits } = splitWaitTimes(clientConvs);
+  const initialStats = initialWaits.length ? calcBrackets(initialWaits, sla) : null;
+  const inConvStats = inConvWaits.length ? calcBrackets(inConvWaits, sla) : null;
   
   const baselineMsgs = (companyMsgs / (uniqueClients || 1)).toFixed(1);
   const targetMsgs = isSales ? 5.5 : 4.0;
@@ -1602,7 +1890,7 @@ function runClientSideAnalysis(rows, forcedFocus = null, handoffPolicy = null, f
     let firstHumanIdx = -1;
     for (let idx = 0; idx < msgs.length; idx++) {
       const m = msgs[idx];
-      if (m['Propio'] && m['Propio'].trim().toLowerCase() === 'si') {
+      if (isPropio(m)) {
         const opName = (m['Nombre Operador'] || '').trim();
         if (!/bot|sistema|auto/i.test(opName)) {
           firstHumanIdx = idx;
@@ -1617,7 +1905,7 @@ function runClientSideAnalysis(rows, forcedFocus = null, handoffPolicy = null, f
       const clientTextsBefore = [];
       for (let idx = 0; idx < firstHumanIdx; idx++) {
         const m = msgs[idx];
-        if (!m['Propio'] || m['Propio'].trim().toLowerCase() !== 'si') {
+        if (!isPropio(m)) {
           const txt = (m['Mensaje'] || '').trim();
           if (txt && !['[AUDIO]', '[IMAGEN]'].includes(txt) && txt.length > 2) {
             clientTextsBefore.push(txt);
@@ -1636,7 +1924,7 @@ function runClientSideAnalysis(rows, forcedFocus = null, handoffPolicy = null, f
       if (!matchedKey) matchedKey = catDefs[0].key;
 
       catCounts[matchedKey]++;
-      const humanMsgsInConv = msgs.filter(m => m['Propio'] && m['Propio'].trim().toLowerCase() === 'si' && !/bot|sistema|auto/i.test(m['Nombre Operador'] || '')).length;
+      const humanMsgsInConv = msgs.filter(m => isPropio(m) && !/bot|sistema|auto/i.test(m['Nombre Operador'] || '')).length;
       catHours[matchedKey] += (humanMsgsInConv * 2.5) / 60;
 
       // 1. Extraer frases reales del cliente
@@ -1651,7 +1939,7 @@ function runClientSideAnalysis(rows, forcedFocus = null, handoffPolicy = null, f
       // 2. Extraer frases reales de respuesta del operador humano
       for (let idx = firstHumanIdx; idx < msgs.length; idx++) {
         const m = msgs[idx];
-        if (m['Propio'] && m['Propio'].trim().toLowerCase() === 'si') {
+        if (isPropio(m)) {
           const opName = (m['Nombre Operador'] || '').trim();
           if (!/bot|sistema|auto/i.test(opName)) {
             const txt = (m['Mensaje'] || '').trim();
@@ -1776,51 +2064,27 @@ function runClientSideAnalysis(rows, forcedFocus = null, handoffPolicy = null, f
       company_ratio: (companyMsgs / (clientMsgs || 1)).toFixed(2),
       avg_messages_per_client: (rows.length / uniqueClients).toFixed(1),
       baseline_company_msgs_per_client: parseFloat(baselineMsgs),
-      target_company_msgs_per_client: targetMsgs
+      target_company_msgs_per_client: targetMsgs,
+      // Marca de procedencia: 'browser' calcula solo lo derivable del CSV sin el motor Python.
+      // Toda métrica que este modo no puede calcular se emite como null (nunca como constante).
+      engine_mode: 'browser'
     },
-    schedule: {
-      hourly: [0,0,0,0,0,0,10,50,120,200,280,240,180,160,190,210,180,140,80,40,20,10,5,0],
-      weekdays: { "Lunes": 320, "Martes": 290, "Miércoles": 270, "Jueves": 250, "Viernes": 210, "Sábado": 80, "Domingo": 20 },
-      peak_hour: "10:00 a 11:00 hs",
-      peak_day: "Lunes",
-      top_peak_hours: [
-        { hour: 10, hour_range: "10:00 a 11:00 hs", count: 280, percentage: 21.0 },
-        { hour: 11, hour_range: "11:00 a 12:00 hs", count: 240, percentage: 18.0 },
-        { hour: 15, hour_range: "15:00 a 16:00 hs", count: 210, percentage: 15.8 }
-      ],
-      peak_hours_summary: "10-11 hs (21%) | 11-12 hs (18%) | 15-16 hs (16%)",
-      business_hours_percentage: 84.5,
-      after_hours_percentage: 15.5
-    },
+    schedule: scheduleStats,     // null solo si ninguna fecha fue reconocible
     handoff: handoffData,
     handoff_gap_analysis: handoffGapAnalysis,
-    fragmentation: { rate: 48.5, burst_1_msg: 100, burst_2_msgs: 40, burst_3_plus_msgs: 50, total_bursts: 190 },
+    fragmentation: fragmentationStats,
     wait_times: {
       average_minutes: parseFloat(avgWait),
-      median_minutes: 2.0,
-      p90_minutes: 24.0,
-      p95_minutes: 39.0,
+      median_minutes: globalStats.median_minutes,
+      p90_minutes: globalStats.p90_minutes,
+      p95_minutes: globalStats.p95_minutes,
       sla: sla,
       over_warning_count: overWarn,
-      over_warning_percentage: waitTimes.length ? Math.round((overWarn / waitTimes.length) * 1000) / 10 : 0,
+      over_warning_percentage: waitTimes.length ? round1((overWarn / waitTimes.length) * 100) : 0,
       system_drops: 0,
       brackets: brackets,
-      initial_response: {
-        average_minutes: 18.5,
-        median_minutes: 3.0,
-        p90_minutes: 28.0,
-        count: Math.round(uniqueClients * 0.9),
-        brackets: { "< 2m (Inmediato)": 420, "2 - 6m (Aceptable)": 310, "6 - 15m (Alerta)": 180, "15 - 30m (❄️ Zona Fría)": 90, "> 30m (Crítico)": 60 },
-        ok_summary: { count: 910, percentage: 85.8 },
-        risk_summary: { count: 150, percentage: 14.2 }
-      },
-      in_conversation: {
-        average_minutes: 4.2,
-        median_minutes: 1.5,
-        p90_minutes: 12.0,
-        count: companyMsgs - Math.round(uniqueClients * 0.9),
-        brackets: { "< 2m (Inmediato)": 840, "2 - 6m (Aceptable)": 520, "6 - 15m (Alerta)": 140, "15 - 30m (❄️ Zona Fría)": 40, "> 30m (Crítico)": 15 }
-      }
+      initial_response: initialStats,
+      in_conversation: inConvStats
     },
     ping_pong: {
       real_client_avg: (clientMsgs / (uniqueClients || 1)).toFixed(1),
@@ -1832,60 +2096,12 @@ function runClientSideAnalysis(rows, forcedFocus = null, handoffPolicy = null, f
       excess_factor: ((rows.length / (uniqueClients || 1)) / 4.5).toFixed(1),
       excess_percentage: Math.round((((rows.length / (uniqueClients || 1)) - 4.5) / 4.5) * 100)
     },
-    topics: [
-      { category: isSales ? "Consultas de Precios y Catálogo" : "Gestión de Trámites y Consultas", conversations: Math.round(uniqueClients * 0.6), percentage: 60.0, avg_messages_per_client: 18.0, avg_client_messages: 8.2, avg_operator_messages: 9.8, ping_pong_rate: 4.0, ping_pong_turns: 9.0, ping_pong_severity: "ALTO", badge_class: "orange", total_messages: Math.round(rows.length * 0.5) },
-      { category: isSales ? "Envíos y Formas de Pago" : "Reclamos y Demoras de Atención", conversations: Math.round(uniqueClients * 0.3), percentage: 30.0, avg_messages_per_client: 12.0, avg_client_messages: 5.4, avg_operator_messages: 6.6, ping_pong_rate: 2.7, ping_pong_turns: 6.0, ping_pong_severity: "MODERADO", badge_class: "yellow", total_messages: Math.round(rows.length * 0.3) }
-    ],
+    topics: null,             // requiere las regex de categorías por rubro (llega con rubros.json, Fase 4)
     operators: handoffData.operator_distribution,
-    prioritization_audit: {
-      avg_ic_score: 58.2,
-      avg_iu_score: 64.5,
-      high_intent_leads_count: Math.round(uniqueClients * 0.62),
-      fifo_delayed_percentage: 42.8,
-      fifo_vs_spoter_wait: {
-        fifo_high_intent_wait_min: 22.4,
-        spoter_high_intent_wait_min: 2.0,
-        wait_reduction_percentage: 91.1
-      },
-      whatsapp_24h_breaches: Math.round(uniqueClients * 0.08),
-      whatsapp_24h_breach_percentage: 8.2
-    },
-    ltv_economics: {
-      rubro_name: rubro,
-      concept: "En construcción y corralones, el cliente compra repetidamente durante la obra y recomienda a otros.",
-      avg_ticket_usd: 850,
-      annual_frequency: 4,
-      retention_years: 2.0,
-      ltv_usd: 6800,
-      cac_usd: 120,
-      leads_at_risk_count: Math.round(uniqueClients * 0.28),
-      leads_at_risk_percentage: 28.5,
-      immediate_lost_usd: Math.round(uniqueClients * 0.28 * 850 * 0.65),
-      ltv_capital_at_risk_usd: Math.round(uniqueClients * 0.28 * 6800 * 0.65),
-      cac_wasted_usd: Math.round(uniqueClients * 0.28 * 120),
-      total_economic_risk_usd: Math.round(uniqueClients * 0.28 * (6800 * 0.65 + 120)),
-      total_economic_risk_ars: Math.round(uniqueClients * 0.28 * (6800 * 0.65 + 120) * 1300),
-      projected_recovered_ltv_usd: Math.round(uniqueClients * 0.28 * 6800 * 0.65 * 0.70),
-      projected_recovered_ltv_ars: Math.round(uniqueClients * 0.28 * 6800 * 0.65 * 0.70 * 1300)
-    },
-    spoter_lite: {
-      leads_rescatables_count: Math.round(uniqueClients * 0.35),
-      leads_rescatables_percentage: 35.0,
-      phases: {
-        gracia_percentage: 28.0,
-        trabajo_percentage: 42.0,
-        cierre_rescate_percentage: 30.0
-      }
-    },
-    actuen_scorecard: [
-      { pillar: "A - Atraer y Atender", score: 70, status: "ÓPTIMO", focus_context: `Handoff: ${policy.toUpperCase()}`, diagnosis: "Flujo de bienvenida operativo.", recommendation: "Filtro Directo en el primer contacto." },
-      { pillar: "C - Cero Vueltas", score: 40, status: "CRÍTICO", focus_context: isSales ? "Cotización Unificada" : "Diagnóstico en Turno Único", diagnosis: "Fragmentación de respuestas en múltiples mensajes cortos.", recommendation: "Imponer la Regla del Bloque Único: Una intención por mensaje." },
-      { pillar: "T - Tiempos Aceitados", score: 45, status: "ALERTA", focus_context: `SLA: ${sla.benchmark_text}`, diagnosis: `Tiempo de espera promedio de ${avgWait} minutos frente al SLA aceptable de ${sla.acceptable} min.`, recommendation: "Inyectar mensaje de espera (oxígeno) ante demoras superiores a 3 minutos." },
-      { pillar: "U - Ubicar la Intención", score: 55, status: "ALERTA", focus_context: "Micro y Macro-intención", diagnosis: `En el rubro ${rubro}, se detectan preguntas en cuotas en lugar de anticipar la necesidad.`, recommendation: "Diseñar un Blueprint con los datos clave de solicitud en el turno inicial." },
-      { pillar: "E - Experiencia Personalizada", score: 50, status: "ALERTA", focus_context: "Reactivación y Empatía", diagnosis: "Falta de protocolo de rescate para conversaciones pausadas.", recommendation: "Seguimiento personalizado según el motivo de la consulta." },
-      { pillar: "N - Nutrir y Cerrar", score: 40, status: "CRÍTICO", focus_context: isSales ? "Tipping Point Comercial" : "Confirmación de FCR", diagnosis: "Cierres pasivos sin llamado a la acción.", recommendation: isSales ? "Cerrar con Tipping Point de confirmación o reserva." : "Cerrar con confirmación de solución (FCR)." },
-      { pillar: "+ Optimización Continua", score: 60, status: "ALERTA", focus_context: "Balance de Carga y Handoff", diagnosis: `${topHumanName} concentra el ${topHumanPct}% de la carga de los asesores humanos.`, recommendation: `Estandarizar atajos de respuesta rápida para ${topHumanName}.` }
-    ],
+    prioritization_audit: null,  // IC/IU: requiere el motor Spoter
+    ltv_economics: null,         // Matemática del LTV: requiere el motor Spoter
+    spoter_lite: null,           // Fases Gracia/Trabajo/Rescate: requiere el motor Spoter
+    actuen_scorecard: null,      // Semáforo ACTÚEN+: requiere el motor Spoter
     savings: {
       current_company_messages: companyMsgs,
       optimized_target_messages: Math.round(uniqueClients * targetMsgs),
@@ -2081,6 +2297,9 @@ function initWizardEvents() {
 // --- RENDERIZADO GLOBAL DEL ANÁLISIS ---
 function renderAnalysis(data) {
   currentData = data;
+
+  // Un render nuevo parte de cero: se revierten los avisos del render anterior.
+  clearEngineNotices();
   const activeRubroKey = data.meta.detected_rubro_key || 'servicios_profesionales';
   const isSalesMode = (data.meta.business_focus === 'ventas');
   const compName = data.meta.company_name || 'Nuestra Empresa';
@@ -2094,7 +2313,32 @@ function renderAnalysis(data) {
   document.getElementById('dropzonePanel').style.display = 'none';
   const wiz = document.getElementById('wizardSection');
   if (wiz) wiz.style.display = 'none';
-  document.getElementById('dashboardContent').style.display = 'block';
+  const dashboard = document.getElementById('dashboardContent');
+  dashboard.style.display = 'block';
+
+  // Banner permanente de procedencia cuando el análisis corrió sin el motor Python.
+  let modeBanner = document.getElementById('engineModeBanner');
+  if (isBrowserEngine(data)) {
+    if (!modeBanner) {
+      modeBanner = document.createElement('div');
+      modeBanner.id = 'engineModeBanner';
+      modeBanner.className = 'engine-mode-banner';
+      dashboard.insertBefore(modeBanner, dashboard.firstChild);
+    }
+    modeBanner.innerHTML = `
+      <span class="engine-mode-icon">🌐</span>
+      <div>
+        <strong>Análisis parcial — modo navegador.</strong>
+        Se calcularon volumen, operadores, ping-pong, tiempos de espera con percentiles,
+        fragmentación, horarios y disparadores de handoff a partir de tu CSV.
+        El Semáforo ACTÚEN+, el Triage IU/IC, la matemática del LTV y la clasificación temática
+        <strong>requieren el motor Spoter</strong> y aparecen como no disponibles.
+        <br><span class="engine-mode-cta">Para el informe completo: <code>python3 api_server.py 8080</code></span>
+      </div>`;
+    modeBanner.style.display = '';
+  } else if (modeBanner) {
+    modeBanner.style.display = 'none';
+  }
 
   // 2. Poblar Barra Ejecutiva Superior de Mando (Alta Relevancia)
   document.getElementById('badgeRubroTop').textContent = `🏢 Rubro: ${data.meta.detected_rubro}`;
@@ -2138,9 +2382,11 @@ function renderAnalysis(data) {
   document.getElementById('kpiClients').textContent = data.meta.unique_clients.toLocaleString();
   
   const peaks = (data.schedule && data.schedule.top_peak_hours) || [];
-  const p1 = peaks[0] || { hour_range: '10:00 - 11:00 hs', count: '-' };
-  const p2 = peaks[1] || { hour_range: '14:00 - 15:00 hs', count: '-' };
-  const p3 = peaks[2] || { hour_range: '11:00 - 12:00 hs', count: '-' };
+  // Sin datos de horarios no se inventan picos: se muestran vacíos.
+  const emptyPeak = { hour_range: NA_TEXT, count: '-' };
+  const p1 = peaks[0] || emptyPeak;
+  const p2 = peaks[1] || emptyPeak;
+  const p3 = peaks[2] || emptyPeak;
 
   const r1Time = document.getElementById('peakRowTime1');
   const r1Count = document.getElementById('peakRowCount1');
@@ -2162,17 +2408,21 @@ function renderAnalysis(data) {
     peak3Text = peaks.map(p => `${p.hour_range.split(' ')[0]} hs`).join(' | ');
   }
   const badgeSched = document.getElementById('badgeTop3HoursSchedule');
-  if (badgeSched) badgeSched.textContent = `Top 3 Picos Horarios: ${peak3Text || '10-11 hs'}`;
+  if (badgeSched) badgeSched.textContent = `Top 3 Picos Horarios: ${peak3Text || NA_TEXT}`;
 
   // KPI 3: Fragmentación (Cero Vueltas)
-  const fragRate = data.fragmentation.rate;
-  document.getElementById('kpiFragmentation').textContent = `${fragRate}%`;
+  const fragRate = data.fragmentation ? data.fragmentation.rate : null;
+  document.getElementById('kpiFragmentation').textContent = metricOr(fragRate, v => `${v}%`);
   const cardFrag = document.getElementById('cardKpiFrag');
   const tagFrag = document.getElementById('tagKpiFrag');
   const subFrag = document.getElementById('kpiFragSub');
   if (cardFrag && tagFrag) {
     cardFrag.classList.remove('alert', 'warning', 'success');
-    if (fragRate > 35) {
+    if (fragRate === null) {
+      tagFrag.className = 'kpi-status-tag status-neutral';
+      tagFrag.textContent = '🔒 NO DISPONIBLE';
+      if (subFrag) subFrag.textContent = 'Requiere el motor Spoter';
+    } else if (fragRate > 35) {
       cardFrag.classList.add('alert');
       tagFrag.className = 'kpi-status-tag status-alert';
       tagFrag.textContent = '🔴 MALO / CRÍTICO';
@@ -2398,6 +2648,14 @@ function renderScorecard(scorecard) {
   const container = document.getElementById('scorecardGrid');
   container.innerHTML = '';
 
+  if (!scorecard || !scorecard.length) {
+    container.innerHTML = engineNoticeHTML(
+      'Semáforo ACTÚEN+ no disponible',
+      'La evaluación de los 7 pilares cruza fragmentación, tiempos, handoff y temas detectados. En el navegador no hay datos suficientes para puntuarlos.'
+    );
+    return;
+  }
+
   scorecard.forEach((item, index) => {
     const statusClass = item.status.toLowerCase();
     const pillarLetter = item.pillar.charAt(0);
@@ -2512,6 +2770,19 @@ function renderScorecard(scorecard) {
 function renderTopics(topics, isSales) {
   const tbody = document.getElementById('topicsTableBody');
   tbody.innerHTML = '';
+
+  if (!topics || !topics.length) {
+    tbody.innerHTML = `<tr><td colspan="9">${engineNoticeHTML(
+      'Clasificación temática no disponible',
+      'Agrupar las conversaciones por tema usa las categorías calibradas de cada rubro, que hoy viven solo en el motor Spoter. La pestaña de Handoff sí muestra los disparadores reales detectados en tus chats.'
+    )}</td></tr>`;
+    const chartBox = document.getElementById('chartTopics');
+    if (chartBox) {
+      chartBox.setAttribute('data-hidden-by-notice', '1');
+      chartBox.style.display = 'none';
+    }
+    return;
+  }
 
   document.getElementById('topicsChartTitle').textContent = isSales 
     ? 'Volumen de Consultas vs. Ping-Pong Real vs. Estándar de la Industria'
@@ -2629,17 +2900,32 @@ function renderFrictionCharts(data) {
   const initData = wt.initial_response || {};
   const convData = wt.in_conversation || {};
 
+  // Cuando el modo navegador no puede separar primera respuesta de respuesta en
+  // conversación, ambos paneles caen al agregado. Se dice explícitamente, en vez
+  // de mostrar el mismo número dos veces como si fueran dos mediciones distintas.
+  const hasSplit = !!(wt.initial_response && wt.in_conversation);
+
   const initBrackets = initData.brackets || wt.brackets || {};
   const convBrackets = convData.brackets || wt.brackets || {};
 
   const initAvg = initData.average_minutes || wt.average_minutes;
   const convAvg = convData.average_minutes || wt.average_minutes;
 
+  const aggregateNote = `Promedio general: ${metricOr(wt.average_minutes, v => `${v} min`)} · sin desglose (requiere motor)`;
+
   const tagInit = document.getElementById('tagInitialWaitAvg');
-  if (tagInit) tagInit.textContent = `Promedio: ${initAvg} min | P90: ${initData.p90_minutes || '-'}m`;
+  if (tagInit) {
+    tagInit.textContent = hasSplit
+      ? `Promedio: ${initAvg} min | P90: ${metricOr(initData.p90_minutes, v => `${v}m`)}`
+      : aggregateNote;
+  }
 
   const tagConv = document.getElementById('tagInConvWaitAvg');
-  if (tagConv) tagConv.textContent = `Promedio: ${convAvg} min | P90: ${convData.p90_minutes || '-'}m`;
+  if (tagConv) {
+    tagConv.textContent = hasSplit
+      ? `Promedio: ${convAvg} min | P90: ${metricOr(convData.p90_minutes, v => `${v}m`)}`
+      : aggregateNote;
+  }
 
   if (sla) {
     document.getElementById('slaDescriptionText').textContent = 
@@ -2759,7 +3045,18 @@ function renderFrictionCharts(data) {
   });
 
   // 2. Donut de Ráfagas (Cero Vueltas)
-  const ctxBurst = document.getElementById('chartBursts').getContext('2d');
+  const burstCanvas = document.getElementById('chartBursts');
+  if (!data.fragmentation) {
+    // Sin datos de ráfagas se reemplaza el gráfico por el aviso, pero el resto
+    // de la pestaña (que sí es real) se sigue renderizando.
+    if (charts.bursts) { charts.bursts.destroy(); charts.bursts = null; }
+    showEngineNotice(
+      burstCanvas,
+      'Ráfagas de fragmentación no disponibles',
+      'No se detectaron ráfagas de mensajes de la empresa en las conversaciones analizadas.'
+    );
+  } else {
+  const ctxBurst = burstCanvas.getContext('2d');
   if (charts.bursts) charts.bursts.destroy();
 
   charts.bursts = new Chart(ctxBurst, {
@@ -2790,6 +3087,7 @@ function renderFrictionCharts(data) {
       }
     }
   });
+  }
 
   // 3. Distribución de Carga (Diferenciando Bot vs Asesores)
   const ctxOps = document.getElementById('chartOperators').getContext('2d');
@@ -2827,15 +3125,29 @@ function renderFrictionCharts(data) {
 
   // 4. Métricas de tiempos
   document.getElementById('valAvgWait').textContent = `${data.wait_times.average_minutes} min`;
-  document.getElementById('valP90Wait').textContent = `${data.wait_times.p90_minutes} min`;
-  document.getElementById('valP95Wait').textContent = `${data.wait_times.p95_minutes} min`;
+  document.getElementById('valP90Wait').textContent = metricOr(data.wait_times.p90_minutes, v => `${v} min`);
+  document.getElementById('valP95Wait').textContent = metricOr(data.wait_times.p95_minutes, v => `${v} min`);
   document.getElementById('valOver15').textContent = `${data.wait_times.over_warning_count} (${data.wait_times.over_warning_percentage}%)`;
   document.getElementById('valDrops').textContent = `${data.wait_times.system_drops} caídas`;
 }
 
 // --- GRÁFICOS DE HORARIOS Y DÍAS DE CONTACTO ---
 function renderScheduleCharts(schedule) {
-  if (!schedule) return;
+  if (!schedule) {
+    const summary = document.getElementById('scheduleSummaryText');
+    if (summary) summary.textContent = '';
+    showEngineNotice(
+      document.getElementById('chartHourlySchedule'),
+      'Análisis de horarios no disponible',
+      'No se reconoció ninguna fecha válida en la columna de fecha/hora del CSV, así que no se puede ubicar el primer contacto de cada conversación.'
+    );
+    const weekdayCanvas = document.getElementById('chartWeekdaySchedule');
+    if (weekdayCanvas) {
+      weekdayCanvas.setAttribute('data-hidden-by-notice', '1');
+      weekdayCanvas.style.display = 'none';
+    }
+    return;
+  }
 
   document.getElementById('scheduleSummaryText').textContent = 
     `Pico semanal: ${schedule.peak_day} | Horario más concurrido: ${schedule.peak_hour} (${schedule.business_hours_percentage}% en horario comercial y ${schedule.after_hours_percentage}% fuera de hora).`;
@@ -3249,7 +3561,90 @@ function showToast(msg) {
 }
 
 function escapeHtml(str) {
-  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return String(str == null ? '' : str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// ==========================================================================
+// MODO DE MOTOR — qué se puede calcular sin el motor Python
+// ==========================================================================
+// El camino del navegador emite null en toda métrica que no puede derivar del
+// CSV. Estos helpers hacen que esa ausencia se muestre como ausencia, nunca
+// como un número inventado.
+
+const NA_TEXT = '—';
+
+function isBrowserEngine(data) {
+  return !!(data && data.meta && data.meta.engine_mode === 'browser');
+}
+
+/** Devuelve el valor formateado, o el guion largo si la métrica no está disponible. */
+function metricOr(value, formatter) {
+  if (value === null || value === undefined) return NA_TEXT;
+  return formatter ? formatter(value) : String(value);
+}
+
+/** Panel estándar para una sección que requiere el motor Spoter. */
+function engineNoticeHTML(titulo, motivo) {
+  return `
+    <div class="engine-notice">
+      <div class="engine-notice-icon">🔒</div>
+      <div class="engine-notice-body">
+        <h4>${escapeHtml(titulo)}</h4>
+        <p>${escapeHtml(motivo)}</p>
+        <p class="engine-notice-cta">
+          Para obtener esta métrica sobre tus datos reales, ejecutá el motor Spoter:
+          <code>python3 api_server.py 8080</code>
+        </p>
+      </div>
+    </div>`;
+}
+
+// Los avisos NO reemplazan el contenido: ocultan el elemento y se insertan al
+// lado. Así un render posterior con el motor activo puede restaurar todo, en
+// lugar de encontrarse con un <canvas> que ya no existe.
+
+/** Oculta targetEl e inserta un aviso hermano. */
+function showEngineNotice(targetEl, titulo, motivo) {
+  if (!targetEl) return;
+  const host = targetEl.parentElement || targetEl;
+  const notice = document.createElement('div');
+  notice.className = 'engine-notice engine-notice-injected';
+  notice.innerHTML = engineNoticeHTML(titulo, motivo)
+    .replace(/^\s*<div class="engine-notice">/, '')
+    .replace(/<\/div>\s*$/, '');
+  host.appendChild(notice);
+  targetEl.setAttribute('data-hidden-by-notice', '1');
+  targetEl.style.display = 'none';
+}
+
+/** Oculta todos los hijos directos de un contenedor y le agrega un aviso. */
+function showEngineNoticeForSection(sectionEl, titulo, motivo) {
+  if (!sectionEl) return;
+  Array.from(sectionEl.children).forEach(ch => {
+    if (ch.classList && ch.classList.contains('engine-notice-injected')) return;
+    ch.setAttribute('data-hidden-by-notice', '1');
+    ch.style.display = 'none';
+  });
+  const notice = document.createElement('div');
+  notice.className = 'engine-notice engine-notice-injected';
+  notice.innerHTML = engineNoticeHTML(titulo, motivo)
+    .replace(/^\s*<div class="engine-notice">/, '')
+    .replace(/<\/div>\s*$/, '');
+  sectionEl.appendChild(notice);
+}
+
+/** Revierte todos los avisos inyectados. Se llama al inicio de cada render. */
+function clearEngineNotices() {
+  document.querySelectorAll('.engine-notice-injected').forEach(n => n.remove());
+  document.querySelectorAll('[data-hidden-by-notice]').forEach(el => {
+    el.style.display = '';
+    el.removeAttribute('data-hidden-by-notice');
+  });
 }
 
 
@@ -3263,6 +3658,16 @@ function renderLtvAndPrioritization(data) {
   const ltv = data.ltv_economics;
   const prio = data.prioritization_audit;
   const lite = data.spoter_lite;
+
+  // Sin motor no hay IC/IU ni matemática del LTV: se avisa, no se simula.
+  if (!ltv || !prio || !lite) {
+    showEngineNoticeForSection(
+      document.getElementById('tabLtvTriage'),
+      'LTV y Triage IU/IC no disponibles',
+      'El Índice de Conversión, el Índice de Urgencia y el capital en riesgo se calculan con el motor determinístico Spoter sobre el contenido de cada conversación.'
+    );
+    return;
+  }
 
   if (!ltv || !prio || !lite) return;
 
@@ -3553,11 +3958,17 @@ function downloadClientReportFallback(data) {
 
 ---
 ## Resumen de Fricción y Tiempos de Respuesta
-- **Espera Promedio Inicial:** ${data.wait_times.average_minutes} min (P90: ${data.wait_times.p90_minutes} min)
+- **Espera Promedio:** ${metricOr(data.wait_times.average_minutes, v => `${v} min`)} (P90: ${metricOr(data.wait_times.p90_minutes, v => `${v} min`)})
 - **Consultas en Zona Fría / Crítica:** ${data.wait_times.over_warning_percentage}% (${data.wait_times.over_warning_count} turnos)
 - **Distribución de Atención:** Bot ${data.handoff.bot_share_percentage}% | Humano ${data.handoff.human_share_percentage}%
 - **Asesor más Cargado:** ${data.handoff.top_human_operator} (${data.handoff.top_human_percentage_of_human}% de la carga de operadores humanos)
-
+${isBrowserEngine(data) ? `
+---
+> ⚠️ **Informe parcial.** Se generó en modo navegador, sin el motor Spoter.
+> No incluye Semáforo ACTÚEN+, Triage IU/IC, matemática del LTV, análisis de
+> horarios ni fragmentación. Para el informe ejecutivo completo ejecutá
+> \`python3 api_server.py 8080\` y volvé a cargar los mismos archivos.
+` : ''}
 Generado por el Analizador Spoter ACTÚEN+.`;
   downloadBlob(md, `auditoria_spoter_${comp.toLowerCase().replace(/\s+/g, '_')}.md`, 'text/markdown;charset=utf-8');
 }

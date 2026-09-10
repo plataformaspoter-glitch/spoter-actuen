@@ -2674,3 +2674,73 @@ input[type="range"] {
   border: 1px solid rgba(99, 102, 241, 0.25) !important;
   font-style: italic;
 }
+
+/* ==========================================================================
+   MODO DE MOTOR — avisos de métricas no disponibles sin el motor Spoter
+   ========================================================================== */
+
+.engine-mode-banner {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  background: var(--warning-bg);
+  border: 1px solid var(--warning);
+  border-left-width: 4px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text-primary);
+}
+
+.engine-mode-icon { font-size: 20px; line-height: 1.2; }
+
+.engine-mode-cta {
+  display: inline-block;
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+}
+
+.engine-mode-banner code,
+.engine-notice code {
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: rgba(127, 127, 127, 0.18);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+
+.engine-notice {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 22px 20px;
+  background: var(--bg-card);
+  border: 1px dashed var(--border-color);
+  border-radius: 12px;
+  text-align: left;
+}
+
+.engine-notice-icon { font-size: 22px; opacity: 0.75; }
+
+.engine-notice-body h4 {
+  margin: 0 0 6px;
+  font-size: 14.5px;
+  color: var(--text-primary);
+}
+
+.engine-notice-body p {
+  margin: 0 0 6px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.engine-notice-cta { font-size: 12.5px; }
+
+.kpi-status-tag.status-neutral {
+  background: rgba(127, 127, 127, 0.15);
+  color: var(--text-secondary);
+}

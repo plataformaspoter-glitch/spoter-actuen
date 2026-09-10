@@ -22,6 +22,62 @@ import json
 from collections import defaultdict, Counter
 from datetime import datetime
 
+# --- Normalización de valores de entrada -------------------------------------
+# Los encabezados de columna se normalizan en parse_files(); acá se normalizan
+# los VALORES, que varían según la plataforma que exportó el CSV.
+
+_TRUTHY_PROPIO = {
+    'si', 'sí', 'yes', 'y', 'true', 't', '1',
+    'out', 'outgoing', 'saliente', 'enviado', 'empresa', 'me',
+}
+
+def is_propio(row_or_value):
+    """True si el mensaje lo envió la empresa.
+
+    Acepta las variantes de las plataformas soportadas: 'Si' (Spoter),
+    'true'/'1' (is_from_me), 'out'/'outgoing' (direction), 'saliente'.
+    """
+    v = row_or_value.get('Propio', '') if isinstance(row_or_value, dict) else row_or_value
+    return str(v or '').strip().lower() in _TRUTHY_PROPIO
+
+
+_DATE_FORMATS = (
+    '%d/%m/%y %H:%M:%S', '%d/%m/%Y %H:%M:%S', '%d/%m/%Y %H:%M', '%d/%m/%y %H:%M',
+    '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%d',
+    '%d-%m-%Y %H:%M:%S', '%m/%d/%Y %H:%M:%S',
+)
+
+def parse_datetime(d_str):
+    """Parsea una fecha de CSV. Devuelve datetime.min si no reconoce el formato."""
+    if not d_str:
+        return datetime.min
+    raw = str(d_str).strip()
+    if not raw:
+        return datetime.min
+    # ISO-8601 ('2026-09-03T10:54:00', con o sin zona horaria)
+    if 'T' in raw[:11]:
+        iso = raw.replace('Z', '+00:00')
+        try:
+            return datetime.fromisoformat(iso).replace(tzinfo=None)
+        except ValueError:
+            pass
+    for fmt in _DATE_FORMATS:
+        try:
+            return datetime.strptime(raw, fmt)
+        except ValueError:
+            pass
+    # Epoch en segundos o milisegundos
+    if raw.isdigit():
+        try:
+            n = int(raw)
+            if n > 10_000_000_000:
+                n //= 1000
+            if 946_684_800 < n < 4_102_444_800:  # entre 2000 y 2100
+                return datetime.fromtimestamp(n)
+        except (ValueError, OSError, OverflowError):
+            pass
+    return datetime.min
+
 class ActuenAnalyzer:
     def __init__(self, company_number=None, company_name=None, forced_focus=None, handoff_policy='hybrid'):
         self.company_number = company_number
@@ -327,7 +383,7 @@ class ActuenAnalyzer:
         company_phone_counter = Counter()
         company_name_counter = Counter()
         for r in rows:
-            propio = r.get('Propio', '').strip().lower() == 'si'
+            propio = is_propio(r)
             if propio:
                 num = r.get('Número', '').strip()
                 if num: company_phone_counter[num] += 1
@@ -352,15 +408,10 @@ class ActuenAnalyzer:
         all_client_text_tokens = []
         company_question_samples = []
 
-        def parse_date(d_str):
-            if not d_str: return datetime.min
-            for fmt in ('%d/%m/%y %H:%M:%S', '%d/%m/%Y %H:%M:%S', '%Y-%m-%d %H:%M:%S'):
-                try: return datetime.strptime(d_str.strip(), fmt)
-                except: pass
-            return datetime.min
+        parse_date = parse_datetime  # normalizador único a nivel de módulo
 
         for r in rows:
-            propio = r.get('Propio', '').strip().lower() == 'si'
+            propio = is_propio(r)
             msg_text = r.get('Mensaje', '')
             
             if propio:
@@ -396,6 +447,36 @@ class ActuenAnalyzer:
 
         unique_clients = len(client_conversations)
         full_client_corpus = ' '.join(all_client_text_tokens)
+
+        # Validación dura: un CSV cuyo mapeo de columnas o de valores falló produce
+        # conteos en cero. Antes eso salía como un informe vacío pero verosímil;
+        # ahora falla de forma visible, indicando qué columna revisar.
+        if company_msgs_count == 0 or unique_clients == 0:
+            columnas = sorted({k for r in rows[:50] for k in r.keys()})
+            faltantes = [c for c in ('Mensaje', 'Propio', 'Número', 'Destinatario')
+                         if not any(r.get(c) for r in rows[:200])]
+            detalle = []
+            if company_msgs_count == 0:
+                detalle.append(
+                    "no se identificó ningún mensaje enviado por la empresa "
+                    "(la columna 'Propio' debe valer Si/true/1/out para los mensajes salientes)"
+                )
+            if unique_clients == 0:
+                detalle.append(
+                    "no se identificó ningún cliente "
+                    "(faltan las columnas 'Número' y/o 'Destinatario')"
+                )
+            return {
+                "error": "El CSV se leyó pero no pudo interpretarse: " + "; ".join(detalle) + ".",
+                "diagnostico": {
+                    "filas_leidas": total_rows,
+                    "columnas_detectadas": columnas,
+                    "columnas_canonicas_vacias": faltantes,
+                    "mensajes_empresa": company_msgs_count,
+                    "mensajes_cliente": client_msgs_count,
+                    "clientes_unicos": unique_clients,
+                }
+            }
 
         # 3. Análisis de Horarios y Días de Inicio (Primer Contacto)
         hourly_distribution = [0] * 24
@@ -493,7 +574,7 @@ class ActuenAnalyzer:
         for cid, msgs in client_conversations.items():
             cur_burst = 0
             for m in msgs:
-                if m.get('Propio', '').strip().lower() == 'si':
+                if is_propio(m):
                     txt = m.get('Mensaje', '')
                     sub_msgs = [p for p in re.split(r'\s*\[?-*salto[-_]?mensaje-*\]?\s*', txt, flags=re.IGNORECASE) if p.strip()] if txt else []
                     cur_burst += max(1, len(sub_msgs))
@@ -518,12 +599,12 @@ class ActuenAnalyzer:
             msgs.sort(key=lambda x: parse_date(x.get('Fecha_Hora', '')))
             first_company_seen = False
             for m in msgs:
-                is_propio = m.get('Propio', '').strip().lower() == 'si'
+                msg_es_propio = is_propio(m)
                 te = m.get('Tiempo Espera', '').strip()
                 if te:
                     try:
                         val = float(te)
-                        if is_propio:
+                        if msg_es_propio:
                             if not first_company_seen:
                                 initial_wait_times.append(val)
                                 first_company_seen = True
@@ -631,12 +712,12 @@ class ActuenAnalyzer:
             cat_operator_msgs = 0
 
             for cid, msgs in client_conversations.items():
-                client_text = ' '.join([m.get('Mensaje', '').lower() for m in msgs if m.get('Propio', '').strip().lower() != 'si'])
+                client_text = ' '.join([m.get('Mensaje', '').lower() for m in msgs if not is_propio(m)])
                 if any(re.search(p, client_text) for p in pats):
                     cat_clients.add(cid)
                     cat_msgs_count += len(msgs)
                     for m in msgs:
-                        if m.get('Propio', '').strip().lower() == 'si':
+                        if is_propio(m):
                             cat_operator_msgs += 1
                         else:
                             cat_client_msgs += 1
@@ -809,6 +890,9 @@ class ActuenAnalyzer:
         return {
             "meta": {
                 "generated_at": datetime.now().isoformat(),
+                # Marca de procedencia: 'server' = análisis completo del motor Python.
+                # El camino del navegador emite 'browser' y anula lo que no puede calcular.
+                "engine_mode": "server",
                 "company_name": detected_company_name,
                 "company_number": detected_company_phone,
                 "detected_rubro": rubro_info['name'],
@@ -918,8 +1002,8 @@ class ActuenAnalyzer:
         fifo_low_waits = []
 
         for cid, msgs in client_conversations.items():
-            user_msgs = [m for m in msgs if m.get('Propio', '').strip().lower() != 'si']
-            company_msgs = [m for m in msgs if m.get('Propio', '').strip().lower() == 'si']
+            user_msgs = [m for m in msgs if not is_propio(m)]
+            company_msgs = [m for m in msgs if is_propio(m)]
 
             user_text = " ".join([m.get('Texto', '') for m in user_msgs]).lower()
 
@@ -2262,7 +2346,7 @@ class ActuenAnalyzer:
             has_human = False
             first_human_idx = -1
             for idx, m in enumerate(msgs):
-                if m.get('Propio', '').strip().lower() == 'si':
+                if is_propio(m):
                     op = m.get('Nombre Operador', '').strip() or 'Bot / Sistema'
                     if not is_bot_re.search(op):
                         has_human = True
@@ -2277,7 +2361,7 @@ class ActuenAnalyzer:
             client_msgs_before = []
             for idx in range(first_human_idx):
                 m = msgs[idx]
-                if m.get('Propio', '').strip().lower() != 'si':
+                if not is_propio(m):
                     txt = m.get('Mensaje', '').strip()
                     if txt and txt not in ('[AUDIO]', '[IMAGEN]') and len(txt) > 2:
                         client_msgs_before.append(txt)
@@ -2301,7 +2385,7 @@ class ActuenAnalyzer:
                 else:
                     matched_cat_key = categories_def[0]["key"]
 
-            human_msgs_count = sum(1 for m in msgs if m.get('Propio', '').strip().lower() == 'si' and not is_bot_re.search(m.get('Nombre Operador', '')))
+            human_msgs_count = sum(1 for m in msgs if is_propio(m) and not is_bot_re.search(m.get('Nombre Operador', '')))
             est_hours = (human_msgs_count * 0.75) / 60.0
 
             category_counts[matched_cat_key] += 1
@@ -2318,7 +2402,7 @@ class ActuenAnalyzer:
             operator_msgs = []
             for idx in range(first_human_idx, len(msgs)):
                 m = msgs[idx]
-                if m.get('Propio', '').strip().lower() == 'si':
+                if is_propio(m):
                     op_name = m.get('Nombre Operador', '').strip()
                     if not is_bot_re.search(op_name):
                         t = m.get('Mensaje', '').strip()

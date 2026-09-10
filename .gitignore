@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# macOS
+.DS_Store
+
+# Herramientas locales
+.claude/
+.superpowers/
+.worktrees/
+
+# Uploads temporales del servidor
+actuen_upload_*/
