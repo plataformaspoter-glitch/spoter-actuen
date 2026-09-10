@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generated_at": "2026-09-09T19:30:42.762854",
+    "generated_at": "2026-09-09T21:59:21.420622",
     "company_name": "Corralón Luján",
     "company_number": "5492613384264",
     "detected_rubro": "Construcción / Corralón / Materiales",
@@ -110,30 +110,35 @@
     "recoverable_hours_month": 227.0,
     "top_triggers": [
       {
-        "category_key": "precios_catalogo",
-        "title": "Cotizaciones y Precios de Catálogo Básico",
+        "category_key": "precios_materiales",
+        "title": "Cotizaciones de Materiales y Áridos",
         "icon": "📋",
-        "count": 1155,
-        "percentage": 88.9,
-        "human_hours_spent": 205.5,
+        "count": 1170,
+        "percentage": 90.1,
+        "human_hours_spent": 206.2,
         "is_avoidable": true,
         "automation_feasibility": "Alta (Inmediata)",
         "solution_type": "Base de Conocimiento RAG",
-        "solution_action": "Sincronizar lista de precios o catálogo PDF en Spoter para cotizaciones instantáneas en un solo bloque estructurado.",
+        "solution_action": "Sincronizar lista de precios de materiales para cotizaciones instantáneas en un solo bloque estructurado.",
         "sample_client_phrases": [
           "Si están cerrado, cuando vean, deberían haber avisado eso, a partir de hoy nos corre multa en el barrio por tenerlo.",
           "Buenas! Me podrías pasar un presupuesto de esto por favor . . 10 caños 60x40 1,6m . 2 kg de electrodos punta azul 2 1/2",
           "Hola buenos días"
         ],
-        "template_target_id": "tplCeroVueltas1"
+        "sample_operator_responses": [
+          "Buenos dias",
+          "Buen día Gustavo!",
+          "Buenos dias, tela media sombra al 90%??"
+        ],
+        "template_target_id": "presupuesto_corralon"
       },
       {
-        "category_key": "stock_disponibilidad",
-        "title": "Stock, Disponibilidad y Retiro en Sucursal",
+        "category_key": "stock_retiro",
+        "title": "Stock, Carga en Depósito y Horarios",
         "icon": "📦",
-        "count": 66,
-        "percentage": 5.1,
-        "human_hours_spent": 8.3,
+        "count": 65,
+        "percentage": 5.0,
+        "human_hours_spent": 8.4,
         "is_avoidable": true,
         "automation_feasibility": "Media (Integración)",
         "solution_type": "Consulta de Inventario Spoter",
@@ -143,32 +148,42 @@
           "Buen dia.. tienen tela olímpica y rollizos para cierre de terreno?",
           "Por mlineal?"
         ],
-        "template_target_id": "tplCeroVueltas4"
+        "sample_operator_responses": [
+          "rollizos trabajamos de 2,5",
+          "Buenas tardes!",
+          "Buenos dias!"
+        ],
+        "template_target_id": "hierros_mallas"
       },
       {
-        "category_key": "envios_logistica",
-        "title": "Envíos, Fletes y Zonas de Reparto",
+        "category_key": "fletes_logistica",
+        "title": "Envíos, Fletes y Descarga en Obra",
         "icon": "🚚",
-        "count": 43,
-        "percentage": 3.3,
-        "human_hours_spent": 8.1,
+        "count": 42,
+        "percentage": 3.2,
+        "human_hours_spent": 8.2,
         "is_avoidable": true,
         "automation_feasibility": "Alta (Inmediata)",
         "solution_type": "Matriz de Zonas Spoter",
-        "solution_action": "Cargar radios de entrega, tarifas de flete por zona y requisitos de descarga en la Base de Conocimiento.",
+        "solution_action": "Cargar radios de entrega, tarifas de flete y requisitos de acceso de camión en la Base de Conocimiento.",
         "sample_client_phrases": [
           "Hola tengo un envío programado para mañana y quería agregar un producto mas",
           "Cotizar por separado",
           "Buenas tardes"
         ],
-        "template_target_id": "tplCeroVueltas2"
+        "sample_operator_responses": [
+          "Buenas tardes, no puedo agregar material para mañana",
+          "Buenas tardes!",
+          "Buenas tardes"
+        ],
+        "template_target_id": "flete_corralon"
       },
       {
         "category_key": "pagos_facturacion",
         "title": "Pagos, Alias, CBU y Facturación A / B",
         "icon": "💳",
-        "count": 18,
-        "percentage": 1.4,
+        "count": 16,
+        "percentage": 1.2,
         "human_hours_spent": 2.7,
         "is_avoidable": true,
         "automation_feasibility": "Alta (Inmediata)",
@@ -179,47 +194,39 @@
           "Pago con transferencia",
           "[IMAGE]"
         ],
-        "template_target_id": "tplCeroVueltas3"
-      },
-      {
-        "category_key": "ubicacion_horarios",
-        "title": "Ubicación, Sucursales y Horarios Comerciales",
-        "icon": "📍",
-        "count": 12,
-        "percentage": 0.9,
-        "human_hours_spent": 0.9,
-        "is_avoidable": true,
-        "automation_feasibility": "Alta (Inmediata)",
-        "solution_type": "Ficha Comercial en Bienvenida",
-        "solution_action": "Incluir enlace directo a Google Maps, horarios de carga y sucursales en el mensaje inicial.",
-        "sample_client_phrases": [
-          "Hola buenas tardes,hasta q hora están abierto",
-          "Muchas gracias",
-          "Buen día"
+        "sample_operator_responses": [
+          "Sergio buenos dias!",
+          "Buenos dias!",
+          "Buenas tardes!"
         ],
-        "template_target_id": "tplCeroVueltas5"
+        "template_target_id": "cierre_corralon"
       },
       {
-        "category_key": "frustracion_menu",
-        "title": "Bypass de Menú Rígido y Solicitud de Operador",
+        "category_key": "frustracion_asesor",
+        "title": "Solicitud de Asesor o Atención Humana",
         "icon": "⚠️",
-        "count": 4,
-        "percentage": 0.3,
+        "count": 5,
+        "percentage": 0.4,
         "human_hours_spent": 1.5,
         "is_avoidable": true,
         "automation_feasibility": "Alta (Conversacional)",
         "solution_type": "IA Conversacional Spoter",
-        "solution_action": "Eliminar el árbol numérico rígido y permitir lenguaje natural fluido con prompts entrenados.",
+        "solution_action": "Eliminar menús rígidos y permitir atención fluida en lenguaje natural.",
         "sample_client_phrases": [
           "Hola, alguien me puede atender por favor",
           "Necesito hablar con Micaela",
           "Buenas tardes una consulta ustedes necesitan para atención al público?"
         ],
-        "template_target_id": "tplCeroVueltas1"
+        "sample_operator_responses": [
+          "Buenos dias",
+          "Buenos dias!",
+          "Buenos dias como estas?"
+        ],
+        "template_target_id": "presupuesto_corralon"
       },
       {
-        "category_key": "venta_consultiva",
-        "title": "Venta Consultiva Mayorista y Grandes Obras",
+        "category_key": "acopio_obras",
+        "title": "Venta Mayorista, Acopio y Grandes Obras",
         "icon": "🤝",
         "count": 1,
         "percentage": 0.1,
@@ -227,11 +234,14 @@
         "is_avoidable": false,
         "automation_feasibility": "Consultiva (Humano)",
         "solution_type": "Copiloto HITL Spoter",
-        "solution_action": "Derivación guiada con ficha de intencionalidad comercial y urgencia pre-cargada para el asesor.",
+        "solution_action": "Derivación guiada con ficha de intencionalidad comercial y volumen para el asesor comercial.",
         "sample_client_phrases": [
           "Tengo cuenta corriente a nombre de Oscar Gómez, necesito pedir estos materiales por favor"
         ],
-        "template_target_id": "tplCeroVueltas7"
+        "sample_operator_responses": [
+          "Buenas tardes!"
+        ],
+        "template_target_id": "rescate_corralon"
       }
     ]
   },

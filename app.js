@@ -162,11 +162,37 @@ function initExecutiveControls() {
         currentData.meta.rubro_updated = true;
         const isSales = (currentData.meta.business_focus === 'ventas');
         currentData.master_templates = getDynamicRubroTemplates(newRubro, isSales, currentData.meta.company_name);
+
+        // Re-mapear inmediatamente los disparadores de Handoff al nuevo rubro
+        const gapCats = getRubroGapCategories(newRubro);
+        if (currentData.handoff_gap_analysis && currentData.handoff_gap_analysis.top_triggers) {
+          const oldList = currentData.handoff_gap_analysis.top_triggers;
+          currentData.handoff_gap_analysis.top_triggers = gapCats.map((c, i) => {
+            const old = oldList[i] || {};
+            return {
+              category_key: c.key,
+              title: c.title,
+              icon: c.icon,
+              count: old.count || 45,
+              percentage: old.percentage || 12.5,
+              human_hours_spent: old.human_hours_spent || 8.0,
+              is_avoidable: c.feasibility !== "Consultiva (Humano)",
+              automation_feasibility: c.feasibility,
+              solution_type: c.solution_type,
+              solution_action: c.solution_action,
+              sample_client_phrases: old.sample_client_phrases || [],
+              sample_operator_responses: old.sample_operator_responses || [],
+              template_target_id: c.template_target_id
+            };
+          });
+          renderHandoffGaps(currentData.handoff_gap_analysis);
+        }
+
         renderTemplates(currentData.master_templates, isSales);
         renderQualificationPanel(currentData);
         const badgeRubro = document.getElementById('badgeRubroTop');
         if (badgeRubro) badgeRubro.textContent = `🏢 Rubro: ${currentData.meta.detected_rubro}`;
-        showToast(`🏢 Rubro actualizado: ${selectRubroTop.options[selectRubroTop.selectedIndex].text}`);
+        showToast(`🏢 Rubro y brechas actualizadas: ${selectRubroTop.options[selectRubroTop.selectedIndex].text}`);
       }
       triggerReload();
     });
@@ -1074,6 +1100,269 @@ function getDynamicRubroTemplates(rubroKey, isSales, companyName) {
   ];
 }
 
+
+// --- DEFINICIÓN DE CATEGORÍAS DE BRECHAS DE HANDOFF POR RUBRO ---
+function getRubroGapCategories(rubroKey) {
+  if (rubroKey === 'salud_obra_social') {
+    return [
+      {
+        key: "autorizaciones_ordenes",
+        title: "Autorizaciones Médicas, Órdenes y Prácticas",
+        icon: "🩺",
+        regex: /autoriz|orden|pr[aá]ctica|estudio|estudios|ginec[oó]log|m[eé]dico|pediatra|auditor[ií]a|aprobaci[oó]n|derivaci[oó]n|interconsulta|tomograf|resonanc|laboratorio|analisis|an[aá]lisis|ecograf/i,
+        feasibility: "Alta (Inmediata)",
+        solution_type: "Triaje Clínico Spoter",
+        solution_action: "Recolectar foto de orden médica con diagnóstico, credencial y lugar de atención en el mensaje inicial para ingresar a auditoría médica en 1 solo paso.",
+        template_target_id: "autorizaciones"
+      },
+      {
+        key: "copagos_reintegros",
+        title: "Copagos, Reintegros y Facturación Médica",
+        icon: "💳",
+        regex: /copago|reintegro|factura|facturaci[oó]n|arancel|pago|pagar|cuota|cbu|alias|transferencia|ticket|comprobante|recibo|debito|d[eé]bito/i,
+        feasibility: "Alta (Inmediata)",
+        solution_type: "Atajo de Cobranzas / Trámites",
+        solution_action: "Vincular link directo de autogestión de copagos y recepción automática de comprobante con DNI en un mensaje.",
+        template_target_id: "reintegros"
+      },
+      {
+        key: "turnos_cartilla",
+        title: "Turnos, Especialidades y Cartilla Médica",
+        icon: "📅",
+        regex: /turno|turnos|cartilla|profesional|cl[ií]nica|sanatorio|especialidad|consultorio|d[ií]a|horario|atenci[oó]n|atender|doctor|doctora/i,
+        feasibility: "Media (Integración)",
+        solution_type: "Buscador de Cartilla RAG",
+        solution_action: "Conectar cartilla médica en Spoter para informar prestadores por zona y derivar a reserva en 1 turno.",
+        template_target_id: "turnos"
+      },
+      {
+        key: "recetas_farmacia",
+        title: "Recetas Electrónicas y Cobertura de Farmacia",
+        icon: "💊",
+        regex: /receta|recetas|remedio|remedios|farmacia|medicamento|medicamentos|dosis|droga|cobertura farmacia|vadem[eé]cum|prescripci[oó]n/i,
+        feasibility: "Alta (Inmediata)",
+        solution_type: "Validador de Recetas Spoter",
+        solution_action: "Solicitar prescripción digital y credencial en mensaje estructurado para validar cobertura sin derivar.",
+        template_target_id: "recetas_farmacia"
+      },
+      {
+        key: "credencial_afiliacion",
+        title: "Credencial Digital y Estado de Afiliación",
+        icon: "📱",
+        regex: /credencial|carnet|carn[eé]|afiliad|afiliaci[oó]n|padr[oó]n|alta|baja|familiar|incorporar|titular/i,
+        feasibility: "Alta (Inmediata)",
+        solution_type: "Autogestión de Credencial",
+        solution_action: "Disparar instructivo de acceso al portal y credencial digital en el acto sin intervención del asesor.",
+        template_target_id: "credencial_digital"
+      },
+      {
+        key: "frustracion_demoras",
+        title: "Demoras en Atención y Solicitud de Operador",
+        icon: "⚠️",
+        regex: /no me contestan|demora|tardanza|urgente|hablar con|operador|asesor|humano|persona|alguien|ayuda|no entiendo|otra cosa/i,
+        feasibility: "Alta (Conversacional)",
+        solution_type: "Priorización HITL Spoter",
+        solution_action: "Triaje automático por severidad y asignación balanceada al asesor con contexto pre-cargado.",
+        template_target_id: "cierre_fcr"
+      }
+    ];
+  }
+
+  if (rubroKey === 'comercio_retail') {
+    return [
+      {
+        key: "precios_catalogo_stock",
+        title: "Catálogo, Precios, Stock y Talles",
+        icon: "🛍️",
+        regex: /precio|cuanto sale|cuánto sale|cuanto esta|cuánto está|lista|catalogo|catálogo|valor|stock|talle|talles|color|remera|pantalon|prenda|modelo|disponible/i,
+        feasibility: "Alta (Inmediata)",
+        solution_type: "Base de Conocimiento RAG",
+        solution_action: "Sincronizar catálogo y variantes para responder talle, precio y descuento contado en 1 bloque.",
+        template_target_id: "producto_retail"
+      },
+      {
+        key: "envios_despacho",
+        title: "Envíos, Fletes y Tiempos de Entrega",
+        icon: "🚚",
+        regex: /envio|envío|flete|despacho|entrega|costo de envio|cuanto sale el envio|tiempo de entrega|cuando llega|cuándo llega|codigo postal|código postal|cp/i,
+        feasibility: "Alta (Inmediata)",
+        solution_type: "Matriz de Zonas Spoter",
+        solution_action: "Solicitar Código Postal en el primer mensaje y confirmar tarifa y fecha estimada de entrega.",
+        template_target_id: "envios_retail"
+      },
+      {
+        key: "pagos_cuotas",
+        title: "Medios de Pago, Cuotas y Facturación",
+        icon: "💳",
+        regex: /pago|factura|tarjeta|cuota|cuotas|transferencia|efectivo|debito|débito|mercadopago|alias|cbu|descuento efectivo|link de pago/i,
+        feasibility: "Alta (Inmediata)",
+        solution_type: "Atajo Maestro Inmediato",
+        solution_action: "Enviar opciones de pago, cuotas sin interés y datos bancarios oficiales en un solo bloque con descuento.",
+        template_target_id: "pago_retail"
+      },
+      {
+        key: "cambios_devoluciones",
+        title: "Cambios, Devoluciones y Postventa",
+        icon: "🔄",
+        regex: /cambio|cambiar|devolucion|devolución|falla|garantia|garantía|vino roto|no me queda|talle chico|talle grande/i,
+        feasibility: "Alta (Inmediata)",
+        solution_type: "Protocolo Postventa Cero Vueltas",
+        solution_action: "Recolectar número de pedido, motivo de cambio y nuevo talle en mensaje inicial sin derivaciones.",
+        template_target_id: "cambios_retail"
+      },
+      {
+        key: "locales_horarios",
+        title: "Locales, Retiro en Tienda y Horarios",
+        icon: "📍",
+        regex: /local|sucursal|donde estan|dónde están|direccion|dirección|horario|abierto|retirar hoy|pick up|mapa|hasta que hora/i,
+        feasibility: "Alta (Inmediata)",
+        solution_type: "Ficha Comercial en Bienvenida",
+        solution_action: "Incluir sucursales, mapa y horarios de atención en la bienvenida.",
+        template_target_id: "producto_retail"
+      },
+      {
+        key: "frustracion_asesor",
+        title: "Solicitud de Asesor Humano",
+        icon: "⚠️",
+        regex: /asesor|operador|humano|persona|alguien|ayuda|no me sirve|no entiendo|otra cosa|hablar con/i,
+        feasibility: "Alta (Conversacional)",
+        solution_type: "IA Conversacional Spoter",
+        solution_action: "Eliminar menús rígidos y permitir atención fluida en lenguaje natural.",
+        template_target_id: "rescate_carrito"
+      }
+    ];
+  }
+
+  if (rubroKey === 'construccion_corralon') {
+    return [
+      {
+        key: "precios_materiales",
+        title: "Cotizaciones de Materiales y Áridos",
+        icon: "📋",
+        regex: /precio|cuanto sale|cuánto sale|cuanto esta|cuánto está|lista|catalogo|catálogo|valor|cotizacion|cotización|presupuesto|costo|bolsa|cemento|hierro|chapa|ladrillo|metro|arena|aridos|vigueta/i,
+        feasibility: "Alta (Inmediata)",
+        solution_type: "Base de Conocimiento RAG",
+        solution_action: "Sincronizar lista de precios de materiales para cotizaciones instantáneas en un solo bloque estructurado.",
+        template_target_id: "presupuesto_corralon"
+      },
+      {
+        key: "fletes_logistica",
+        title: "Envíos, Fletes y Descarga en Obra",
+        icon: "🚚",
+        regex: /envio|envío|flete|despacho|entrega|zona|domicilio|llegan a|pilar|lujan|luján|capital|costo de envio|cuanto sale el envio|flete a|traer|camion|camión|volcador|hidrogrua|hidrogrúa|reparto/i,
+        feasibility: "Alta (Inmediata)",
+        solution_type: "Matriz de Zonas Spoter",
+        solution_action: "Cargar radios de entrega, tarifas de flete y requisitos de acceso de camión en la Base de Conocimiento.",
+        template_target_id: "flete_corralon"
+      },
+      {
+        key: "pagos_facturacion",
+        title: "Pagos, Alias, CBU y Facturación A / B",
+        icon: "💳",
+        regex: /pago|factura|factura a|tarjeta|cuota|transferencia|efectivo|debito|débito|mercadopago|alias|cbu|iva|afip|fiscal|descuento efectivo|forma de pago|medios de pago/i,
+        feasibility: "Alta (Inmediata)",
+        solution_type: "Atajo Maestro Inmediato",
+        solution_action: "Configurar atajo de medios de pago y recolección automática de CUIT/Razón Social en mensaje cero.",
+        template_target_id: "cierre_corralon"
+      },
+      {
+        key: "stock_retiro",
+        title: "Stock, Carga en Depósito y Horarios",
+        icon: "📦",
+        regex: /stock|tienen|hay|disponible|disponibilidad|para retirar|queda|retirar hoy|entrega inmediata|conseguir|medida|horario de carga|sucursal/i,
+        feasibility: "Media (Integración)",
+        solution_type: "Consulta de Inventario Spoter",
+        solution_action: "Vincular stock mínimo y condiciones de retiro para responder sin consultar al depósito.",
+        template_target_id: "hierros_mallas"
+      },
+      {
+        key: "acopio_obras",
+        title: "Venta Mayorista, Acopio y Grandes Obras",
+        icon: "🤝",
+        regex: /constructora|obra grande|cuenta corriente|licitacion|licitación|acopio|volumen|distribuidor|arquitecto|presupuesto formal/i,
+        feasibility: "Consultiva (Humano)",
+        solution_type: "Copiloto HITL Spoter",
+        solution_action: "Derivación guiada con ficha de intencionalidad comercial y volumen para el asesor comercial.",
+        template_target_id: "rescate_corralon"
+      },
+      {
+        key: "frustracion_asesor",
+        title: "Solicitud de Asesor o Atención Humana",
+        icon: "⚠️",
+        regex: /no me sirve|no entiendo|otra cosa|no es lo que pregunte|mala atencion|hablar con|asesor|humano|persona|alguien|operador/i,
+        feasibility: "Alta (Conversacional)",
+        solution_type: "IA Conversacional Spoter",
+        solution_action: "Eliminar menús rígidos y permitir atención fluida en lenguaje natural.",
+        template_target_id: "presupuesto_corralon"
+      }
+    ];
+  }
+
+  // General / Otros Rubros
+  return [
+    {
+      key: "presupuesto_alcance",
+      title: "Presupuestos, Tarifas y Alcance del Servicio",
+      icon: "📋",
+      regex: /precio|cuanto sale|cuánto sale|tarifa|costo|presupuesto|cotizacion|cotización|planes|honorarios|valor|servicio|alcance/i,
+      feasibility: "Alta (Inmediata)",
+      solution_type: "Base de Conocimiento RAG",
+      solution_action: "Cargar tarifas base y propuesta comercial en Spoter para responder en 1 bloque estructurado.",
+      template_target_id: "presupuesto_comercial"
+    },
+    {
+      key: "pagos_facturacion_gral",
+      title: "Medios de Pago, Alias y Facturación",
+      icon: "💳",
+      regex: /pago|factura|factura a|tarjeta|cuota|transferencia|efectivo|debito|débito|alias|cbu|mercadopago|iva|cuit/i,
+      feasibility: "Alta (Inmediata)",
+      solution_type: "Atajo Maestro Inmediato",
+      solution_action: "Configurar atajo de cobro y solicitud de datos fiscales en un solo paso.",
+      template_target_id: "medios_pago_gral"
+    },
+    {
+      key: "turnos_agenda",
+      title: "Turnos, Citas y Coordinación de Agenda",
+      icon: "📅",
+      regex: /turno|cita|reunion|reunión|agenda|horario|cuando nos vemos|coordinar|entrevista|visita/i,
+      feasibility: "Alta (Inmediata)",
+      solution_type: "Agenda Digital Spoter",
+      solution_action: "Conectar link de calendario o capturar día y rango horario preferido en 1 solo mensaje.",
+      template_target_id: "triaje_soporte_gral"
+    },
+    {
+      key: "requisitos_documentacion",
+      title: "Requisitos Previos y Envío de Documentación",
+      icon: "📝",
+      regex: /requisito|requisitos|documentacion|documentación|papeles|dni|constancia|formulario|que necesito|qué necesito|adjunto/i,
+      feasibility: "Alta (Inmediata)",
+      solution_type: "Checklist Previo Automatizado",
+      solution_action: "Detallar los requisitos y solicitar la documentación en 1 solo envío sin idas y vueltas.",
+      template_target_id: "triaje_soporte_gral"
+    },
+    {
+      key: "seguimiento_estado",
+      title: "Seguimiento y Estado de Gestión",
+      icon: "🔄",
+      regex: /estado|como va|cómo va|novedades|cuando esta|cuándo está|demora|finalizado|listo|seguimiento/i,
+      feasibility: "Media (Integración)",
+      solution_type: "Notificaciones de Estado Spoter",
+      solution_action: "Informar estado actual de la gestión e inyectar oxígeno conversacional para evitar la repregunta.",
+      template_target_id: "cierre_fcr_gral"
+    },
+    {
+      key: "frustracion_asesor",
+      title: "Solicitud de Asesor Personalizado",
+      icon: "⚠️",
+      regex: /asesor|operador|humano|persona|alguien|ayuda|no entiendo|otra cosa|hablar con/i,
+      feasibility: "Alta (Conversacional)",
+      solution_type: "IA Conversacional Spoter",
+      solution_action: "Atención fluida sin fricción de menús numéricos rígidos.",
+      template_target_id: "rescate_comercial_gral"
+    }
+  ];
+}
+
 // --- FALLBACK CLIENT-SIDE (MULTIRUBRO) ---
 function processFilesClientSide(files, forcedFocus = null, handoffPolicy = null, forcedRubro = null) {
   let allRows = [];
@@ -1272,98 +1561,50 @@ function runClientSideAnalysis(rows, forcedFocus = null, handoffPolicy = null, f
   const totalArs = laborArs + apiArs;
   const totalUsd = (totalArs / 1300).toFixed(2);
 
-  // --- CÁLCULO CLIENT-SIDE DE BRECHAS DE HANDOFF ---
-  const catDefs = [
-    {
-      key: "precios_catalogo",
-      title: "Cotizaciones y Precios de Catálogo Básico",
-      icon: "📋",
-      regex: /precio|cuanto sale|cuánto sale|cuanto esta|cuánto está|lista|catalogo|catálogo|valor|cotizacion|cotización|presupuesto|costo|cotizame|bolsa|cemento|hierro|chapa|ladrillo|metro|arena/i,
-      feasibility: "Alta (Inmediata)",
-      solution_type: "Base de Conocimiento RAG",
-      solution_action: "Sincronizar lista de precios y catálogo en Spoter para cotizaciones instantáneas en 1 solo bloque.",
-      template_target_id: "presupuesto_corralon"
-    },
-    {
-      key: "pagos_facturacion",
-      title: "Pagos, Alias, CBU y Facturación A / B",
-      icon: "💳",
-      regex: /pago|factura|factura a|tarjeta|cuota|transferencia|efectivo|debito|débito|mercadopago|alias|cbu|iva|afip|fiscal|descuento efectivo|forma de pago|medios de pago/i,
-      feasibility: "Alta (Inmediata)",
-      solution_type: "Atajo Maestro Inmediato",
-      solution_action: "Configurar atajo de medios de pago y recolección automática de CUIT/Razón Social en un mensaje.",
-      template_target_id: "cierre_corralon"
-    },
-    {
-      key: "envios_logistica",
-      title: "Envíos, Fletes y Zonas de Reparto",
-      icon: "🚚",
-      regex: /envio|envío|flete|despacho|entrega|zona|domicilio|llegan a|pilar|lujan|luján|capital|costo de envio|cuanto sale el envio|flete a|traer|camion|camión|reparto/i,
-      feasibility: "Alta (Inmediata)",
-      solution_type: "Matriz de Zonas Spoter",
-      solution_action: "Cargar radios de entrega, tarifas de flete por zona y requisitos de camión en la Base de Conocimiento.",
-      template_target_id: "flete_corralon"
-    },
-    {
-      key: "stock_disponibilidad",
-      title: "Stock, Disponibilidad y Retiro en Sucursal",
-      icon: "📦",
-      regex: /stock|tienen|hay|disponible|disponibilidad|para retirar|queda|retirar hoy|entrega inmediata|conseguir|medida/i,
-      feasibility: "Media (Integración)",
-      solution_type: "Consulta de Inventario Spoter",
-      solution_action: "Vincular stock mínimo y condiciones de retiro para responder sin consultar al depósito.",
-      template_target_id: "hierros_mallas"
-    },
-    {
-      key: "ubicacion_horarios",
-      title: "Ubicación, Sucursales y Horarios Comerciales",
-      icon: "📍",
-      regex: /horario|abierto|direccion|dirección|donde estan|dónde están|ubicacion|ubicación|sucursal|donde queda|dónde queda|mapa|hasta que hora|sabado|sábado/i,
-      feasibility: "Alta (Inmediata)",
-      solution_type: "Ficha Comercial en Bienvenida",
-      solution_action: "Incluir enlace directo a Google Maps, horarios de carga y sucursales en el mensaje de bienvenida.",
-      template_target_id: "presupuesto_corralon"
-    },
-    {
-      key: "estado_pedido",
-      title: "Estado de Pedido y Seguimiento de Despacho",
-      icon: "🔄",
-      regex: /mi pedido|cuando llega|cuándo llega|estado|seguimiento|despacharon|comprobante|ya pague|ya pagué|demora el pedido|salio el camion/i,
-      feasibility: "Media (Integración)",
-      solution_type: "Seguimiento Automatizado",
-      solution_action: "Integrar webhook de estado de despacho y confirmación de entrega automática.",
-      template_target_id: "rescate_corralon"
-    },
-    {
-      key: "frustracion_menu",
-      title: "Bypass de Menú Rígido y Pedido de Asesor",
-      icon: "⚠️",
-      regex: /no me sirve|no entiendo|otra cosa|no es lo que pregunte|mala atencion|hablar con|asesor|humano|persona|alguien|operador/i,
-      feasibility: "Alta (Conversacional)",
-      solution_type: "IA Conversacional Spoter",
-      solution_action: "Eliminar el árbol numérico rígido y permitir lenguaje natural fluido con prompts entrenados.",
-      template_target_id: "presupuesto_corralon"
-    }
-  ];
+  // --- CÁLCULO CLIENT-SIDE DE BRECHAS DE HANDOFF POR RUBRO Y RESPUESTAS DEL OPERADOR ---
+  const catDefs = getRubroGapCategories(rubroKey);
 
   let catCounts = {};
   let catHours = {};
   let catSamples = {};
+  let catOperatorSamples = {};
   catDefs.forEach(c => {
     catCounts[c.key] = 0;
     catHours[c.key] = 0;
     catSamples[c.key] = [];
+    catOperatorSamples[c.key] = [];
   });
 
   let totalHumanConvs = 0;
   Object.keys(clientConvs).forEach(cid => {
     const msgs = clientConvs[cid];
-    const hasHuman = msgs.some(m => m['Propio'] && m['Propio'].trim().toLowerCase() === 'si' && !/bot|sistema|auto/i.test(m['Nombre Operador'] || ''));
-    if (hasHuman) {
-      totalHumanConvs++;
-      const clientTexts = msgs.filter(m => (!m['Propio'] || m['Propio'].trim().toLowerCase() !== 'si') && m['Mensaje']).map(m => m['Mensaje'].trim());
-      const convBlob = clientTexts.join(' ');
+    let firstHumanIdx = -1;
+    for (let idx = 0; idx < msgs.length; idx++) {
+      const m = msgs[idx];
+      if (m['Propio'] && m['Propio'].trim().toLowerCase() === 'si') {
+        const opName = (m['Nombre Operador'] || '').trim();
+        if (!/bot|sistema|auto/i.test(opName)) {
+          firstHumanIdx = idx;
+          break;
+        }
+      }
+    }
 
+    if (firstHumanIdx !== -1) {
+      totalHumanConvs++;
+      // Mensajes de clientes anteriores al handoff
+      const clientTextsBefore = [];
+      for (let idx = 0; idx < firstHumanIdx; idx++) {
+        const m = msgs[idx];
+        if (!m['Propio'] || m['Propio'].trim().toLowerCase() !== 'si') {
+          const txt = (m['Mensaje'] || '').trim();
+          if (txt && !['[AUDIO]', '[IMAGEN]'].includes(txt) && txt.length > 2) {
+            clientTextsBefore.push(txt);
+          }
+        }
+      }
+
+      const convBlob = clientTextsBefore.join(' ');
       let matchedKey = null;
       for (let cdef of catDefs) {
         if (cdef.regex.test(convBlob)) {
@@ -1371,16 +1612,34 @@ function runClientSideAnalysis(rows, forcedFocus = null, handoffPolicy = null, f
           break;
         }
       }
-      if (!matchedKey) matchedKey = "precios_catalogo";
+      if (!matchedKey) matchedKey = catDefs[0].key;
 
       catCounts[matchedKey]++;
       const humanMsgsInConv = msgs.filter(m => m['Propio'] && m['Propio'].trim().toLowerCase() === 'si' && !/bot|sistema|auto/i.test(m['Nombre Operador'] || '')).length;
       catHours[matchedKey] += (humanMsgsInConv * 2.5) / 60;
 
-      for (let txt of clientTexts) {
-        if (txt.length >= 8 && txt.length <= 110 && !txt.startsWith('.') && catSamples[matchedKey].length < 3) {
+      // 1. Extraer frases reales del cliente
+      for (let txt of clientTextsBefore) {
+        if (txt.length >= 6 && txt.length <= 140 && !txt.startsWith('.') && catSamples[matchedKey].length < 3) {
           if (!catSamples[matchedKey].includes(txt)) {
             catSamples[matchedKey].push(txt);
+          }
+        }
+      }
+
+      // 2. Extraer frases reales de respuesta del operador humano
+      for (let idx = firstHumanIdx; idx < msgs.length; idx++) {
+        const m = msgs[idx];
+        if (m['Propio'] && m['Propio'].trim().toLowerCase() === 'si') {
+          const opName = (m['Nombre Operador'] || '').trim();
+          if (!/bot|sistema|auto/i.test(opName)) {
+            const txt = (m['Mensaje'] || '').trim();
+            if (txt && !['[AUDIO]', '[IMAGEN]'].includes(txt) && txt.length > 8 && !/^gracias|^ok$/i.test(txt) && catOperatorSamples[matchedKey].length < 3) {
+              const cleanOp = txt.replace(/\r?\n+/g, ' ').trim();
+              if (!catOperatorSamples[matchedKey].includes(cleanOp)) {
+                catOperatorSamples[matchedKey].push(cleanOp);
+              }
+            }
           }
         }
       }
@@ -1409,13 +1668,12 @@ function runClientSideAnalysis(rows, forcedFocus = null, handoffPolicy = null, f
       count: cnt,
       percentage: Math.round((cnt / (totalHumanConvs || 1)) * 1000) / 10,
       human_hours_spent: Math.round((catHours[k] || 0) * 10) / 10,
-      is_avoidable: true,
+      is_avoidable: cdef.feasibility !== "Consultiva (Humano)",
       automation_feasibility: cdef.feasibility,
       solution_type: cdef.solution_type,
       solution_action: cdef.solution_action,
-      sample_client_phrases: catSamples[k] && catSamples[k].length ? catSamples[k] : [
-        k === "precios_catalogo" ? `¿Tienen disponible ${rubroKey === 'salud_obra_social' ? 'turno para especialista' : (rubroKey === 'comercio_retail' ? 'este artículo en stock' : 'la lista de precios')}?` : (k === "envios_logistica" ? "¿Realizan envíos a mi zona y cuál es la demora?" : "¿A qué alias o CBU puedo transferir?")
-      ],
+      sample_client_phrases: catSamples[k] && catSamples[k].length ? catSamples[k] : [],
+      sample_operator_responses: catOperatorSamples[k] && catOperatorSamples[k].length ? catOperatorSamples[k] : [],
       template_target_id: cdef.template_target_id
     };
   }).filter(t => t.count > 0).sort((a, b) => b.count - a.count);
@@ -1774,8 +2032,10 @@ function initWizardEvents() {
       // Sincronizar selectores del Executive Top Bar
       const topFocus = document.getElementById('selectFocus');
       const topHandoff = document.getElementById('selectHandoff');
+      const topRubro = document.getElementById('selectRubroTop');
       if (topFocus) topFocus.value = selectFocus.value;
       if (topHandoff) topHandoff.value = selectHandoff.value;
+      if (topRubro) topRubro.value = chosenRubro;
 
       // Verificar si hay cambios respecto a lo que vino del server
       const rubroChanged = chosenRubro && (chosenRubro !== wizardPendingData.meta.detected_rubro_key);
@@ -3356,6 +3616,13 @@ function renderHandoffGapAnalysis(gap) {
          </div>`
       : '';
 
+    const operatorQuotesHtml = (trig.sample_operator_responses && trig.sample_operator_responses.length)
+      ? `<div class="gap-trigger-quotes gap-operator-quotes">
+           <div class="gap-quotes-label operator-label">👤 Lo que responde hoy el operador humano (Patrón manual actual):</div>
+           ${trig.sample_operator_responses.map(q => `<div class="gap-quote-pill operator-pill">"${escapeHtml(q)}"</div>`).join('')}
+         </div>`
+      : '';
+
     const badgeFeasibilityClass = trig.is_avoidable ? 'avoidable' : 'consultative';
 
     item.innerHTML = `
@@ -3376,7 +3643,7 @@ function renderHandoffGapAnalysis(gap) {
       </div>
 
       ${quotesHtml}
-
+      ${operatorQuotesHtml}
       <div class="gap-trigger-solution">
         <div class="gap-solution-text">
           💡 <strong>Acción Spoter recomendada (${escapeHtml(trig.solution_type)}):</strong> 

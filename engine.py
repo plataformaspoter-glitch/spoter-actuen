@@ -728,7 +728,7 @@ class ActuenAnalyzer:
             client_conversations, rubro_info, sla, wait_times, final_focus
         )
 
-        handoff_gap_analysis = self._compute_handoff_gap_analysis(client_conversations, operator_counts)
+        handoff_gap_analysis = self._compute_handoff_gap_analysis(client_conversations, operator_counts, rubro_key=best_rubro_key)
 
         actuen_scorecard = self._evaluate_actuen_dynamic(
             focus=final_focus,
@@ -1958,97 +1958,274 @@ class ActuenAnalyzer:
         return json.dumps(canned, ensure_ascii=False, indent=2)
 
 
-    def _compute_handoff_gap_analysis(self, client_conversations, operator_counts):
+    def _get_rubro_gap_categories(self, rubro_key):
+        if rubro_key == 'salud_obra_social':
+            return [
+                {
+                    "key": "autorizaciones_ordenes",
+                    "title": "Autorizaciones Médicas, Órdenes y Prácticas",
+                    "icon": "🩺",
+                    "regex": re.compile(r'autoriz|orden|pr[aá]ctica|estudio|estudios|ginec[oó]log|m[eé]dico|pediatra|auditor[ií]a|aprobaci[oó]n|derivaci[oó]n|interconsulta|tomograf|resonanc|laboratorio|analisis|an[aá]lisis|ecograf', re.IGNORECASE),
+                    "feasibility": "Alta (Inmediata)",
+                    "solution_type": "Triaje Clínico Spoter",
+                    "solution_action": "Recolectar foto de orden médica con diagnóstico, credencial y lugar de atención en el mensaje inicial para ingresar a auditoría médica en 1 solo paso.",
+                    "template_target_id": "autorizaciones"
+                },
+                {
+                    "key": "copagos_reintegros",
+                    "title": "Copagos, Reintegros y Facturación Médica",
+                    "icon": "💳",
+                    "regex": re.compile(r'copago|reintegro|factura|facturaci[oó]n|arancel|pago|pagar|cuota|cbu|alias|transferencia|ticket|comprobante|recibo|debito|d[eé]bito', re.IGNORECASE),
+                    "feasibility": "Alta (Inmediata)",
+                    "solution_type": "Atajo de Cobranzas / Trámites",
+                    "solution_action": "Vincular link directo de autogestión de copagos y recepción automática de comprobante con DNI en un mensaje.",
+                    "template_target_id": "reintegros"
+                },
+                {
+                    "key": "turnos_cartilla",
+                    "title": "Turnos, Especialidades y Cartilla Médica",
+                    "icon": "📅",
+                    "regex": re.compile(r'turno|turnos|cartilla|profesional|cl[ií]nica|sanatorio|especialidad|consultorio|d[ií]a|horario|atenci[oó]n|atender|doctor|doctora', re.IGNORECASE),
+                    "feasibility": "Media (Integración)",
+                    "solution_type": "Buscador de Cartilla RAG",
+                    "solution_action": "Conectar cartilla médica en Spoter para informar prestadores por zona y derivar a reserva en 1 turno.",
+                    "template_target_id": "turnos"
+                },
+                {
+                    "key": "recetas_farmacia",
+                    "title": "Recetas Electrónicas y Cobertura de Farmacia",
+                    "icon": "💊",
+                    "regex": re.compile(r'receta|recetas|remedio|remedios|farmacia|medicamento|medicamentos|dosis|droga|cobertura farmacia|vadem[eé]cum|prescripci[oó]n', re.IGNORECASE),
+                    "feasibility": "Alta (Inmediata)",
+                    "solution_type": "Validador de Recetas Spoter",
+                    "solution_action": "Solicitar prescripción digital y credencial en mensaje estructurado para validar cobertura sin derivar.",
+                    "template_target_id": "recetas_farmacia"
+                },
+                {
+                    "key": "credencial_afiliacion",
+                    "title": "Credencial Digital y Estado de Afiliación",
+                    "icon": "📱",
+                    "regex": re.compile(r'credencial|carnet|carn[eé]|afiliad|afiliaci[oó]n|padr[oó]n|alta|baja|familiar|incorporar|titular', re.IGNORECASE),
+                    "feasibility": "Alta (Inmediata)",
+                    "solution_type": "Autogestión de Credencial",
+                    "solution_action": "Disparar instructivo de acceso al portal y credencial digital en el acto sin intervención del asesor.",
+                    "template_target_id": "credencial_digital"
+                },
+                {
+                    "key": "frustracion_demoras",
+                    "title": "Demoras en Atención y Solicitud de Operador",
+                    "icon": "⚠️",
+                    "regex": re.compile(r'no me contestan|demora|tardanza|urgente|hablar con|operador|asesor|humano|persona|alguien|ayuda|no entiendo|otra cosa', re.IGNORECASE),
+                    "feasibility": "Alta (Conversacional)",
+                    "solution_type": "Priorización HITL Spoter",
+                    "solution_action": "Triaje automático por severidad y asignación balanceada al asesor con contexto pre-cargado.",
+                    "template_target_id": "cierre_fcr"
+                }
+            ]
+
+        elif rubro_key == 'comercio_retail':
+            return [
+                {
+                    "key": "precios_catalogo_stock",
+                    "title": "Catálogo, Precios, Stock y Talles",
+                    "icon": "🛍️",
+                    "regex": re.compile(r'precio|cuanto sale|cuánto sale|cuanto esta|cuánto está|lista|catalogo|catálogo|valor|stock|talle|talles|color|remera|pantalon|prenda|modelo|disponible', re.IGNORECASE),
+                    "feasibility": "Alta (Inmediata)",
+                    "solution_type": "Base de Conocimiento RAG",
+                    "solution_action": "Sincronizar catálogo y variantes para responder talle, precio y descuento contado en 1 bloque.",
+                    "template_target_id": "producto_retail"
+                },
+                {
+                    "key": "envios_despacho",
+                    "title": "Envíos, Fletes y Tiempos de Entrega",
+                    "icon": "🚚",
+                    "regex": re.compile(r'envio|envío|flete|despacho|entrega|costo de envio|cuanto sale el envio|tiempo de entrega|cuando llega|cuándo llega|codigo postal|código postal|cp', re.IGNORECASE),
+                    "feasibility": "Alta (Inmediata)",
+                    "solution_type": "Matriz de Zonas Spoter",
+                    "solution_action": "Solicitar Código Postal en el primer mensaje y confirmar tarifa y fecha estimada de entrega.",
+                    "template_target_id": "envios_retail"
+                },
+                {
+                    "key": "pagos_cuotas",
+                    "title": "Medios de Pago, Cuotas y Facturación",
+                    "icon": "💳",
+                    "regex": re.compile(r'pago|factura|tarjeta|cuota|cuotas|transferencia|efectivo|debito|débito|mercadopago|alias|cbu|descuento efectivo|link de pago', re.IGNORECASE),
+                    "feasibility": "Alta (Inmediata)",
+                    "solution_type": "Atajo Maestro Inmediato",
+                    "solution_action": "Enviar opciones de pago, cuotas sin interés y datos bancarios oficiales en un solo bloque con descuento.",
+                    "template_target_id": "pago_retail"
+                },
+                {
+                    "key": "cambios_devoluciones",
+                    "title": "Cambios, Devoluciones y Postventa",
+                    "icon": "🔄",
+                    "regex": re.compile(r'cambio|cambiar|devolucion|devolución|falla|garantia|garantía|vino roto|no me queda|talle chico|talle grande', re.IGNORECASE),
+                    "feasibility": "Alta (Inmediata)",
+                    "solution_type": "Protocolo Postventa Cero Vueltas",
+                    "solution_action": "Recolectar número de pedido, motivo de cambio y nuevo talle en mensaje inicial sin derivaciones.",
+                    "template_target_id": "cambios_retail"
+                },
+                {
+                    "key": "locales_horarios",
+                    "title": "Locales, Retiro en Tienda y Horarios",
+                    "icon": "📍",
+                    "regex": re.compile(r'local|sucursal|donde estan|dónde están|direccion|dirección|horario|abierto|retirar hoy|pick up|mapa|hasta que hora', re.IGNORECASE),
+                    "feasibility": "Alta (Inmediata)",
+                    "solution_type": "Ficha Comercial en Bienvenida",
+                    "solution_action": "Incluir sucursales, mapa y horarios de atención en la bienvenida.",
+                    "template_target_id": "producto_retail"
+                },
+                {
+                    "key": "frustracion_asesor",
+                    "title": "Solicitud de Asesor Humano",
+                    "icon": "⚠️",
+                    "regex": re.compile(r'asesor|operador|humano|persona|alguien|ayuda|no me sirve|no entiendo|otra cosa|hablar con', re.IGNORECASE),
+                    "feasibility": "Alta (Conversacional)",
+                    "solution_type": "IA Conversacional Spoter",
+                    "solution_action": "Eliminar menús rígidos y permitir atención fluida en lenguaje natural.",
+                    "template_target_id": "rescate_carrito"
+                }
+            ]
+
+        elif rubro_key == 'construccion_corralon':
+            return [
+                {
+                    "key": "precios_materiales",
+                    "title": "Cotizaciones de Materiales y Áridos",
+                    "icon": "📋",
+                    "regex": re.compile(r'precio|cuanto sale|cuánto sale|cuanto esta|cuánto está|lista|catalogo|catálogo|valor|cotizacion|cotización|presupuesto|costo|bolsa|cemento|hierro|chapa|ladrillo|metro|arena|aridos|vigueta', re.IGNORECASE),
+                    "feasibility": "Alta (Inmediata)",
+                    "solution_type": "Base de Conocimiento RAG",
+                    "solution_action": "Sincronizar lista de precios de materiales para cotizaciones instantáneas en un solo bloque estructurado.",
+                    "template_target_id": "presupuesto_corralon"
+                },
+                {
+                    "key": "fletes_logistica",
+                    "title": "Envíos, Fletes y Descarga en Obra",
+                    "icon": "🚚",
+                    "regex": re.compile(r'envio|envío|flete|despacho|entrega|zona|domicilio|llegan a|pilar|lujan|luján|capital|costo de envio|cuanto sale el envio|flete a|traer|camion|camión|volcador|hidrogrua|hidrogrúa|reparto', re.IGNORECASE),
+                    "feasibility": "Alta (Inmediata)",
+                    "solution_type": "Matriz de Zonas Spoter",
+                    "solution_action": "Cargar radios de entrega, tarifas de flete y requisitos de acceso de camión en la Base de Conocimiento.",
+                    "template_target_id": "flete_corralon"
+                },
+                {
+                    "key": "pagos_facturacion",
+                    "title": "Pagos, Alias, CBU y Facturación A / B",
+                    "icon": "💳",
+                    "regex": re.compile(r'pago|factura|factura a|tarjeta|cuota|transferencia|efectivo|debito|débito|mercadopago|alias|cbu|iva|afip|fiscal|descuento efectivo|forma de pago|medios de pago', re.IGNORECASE),
+                    "feasibility": "Alta (Inmediata)",
+                    "solution_type": "Atajo Maestro Inmediato",
+                    "solution_action": "Configurar atajo de medios de pago y recolección automática de CUIT/Razón Social en mensaje cero.",
+                    "template_target_id": "cierre_corralon"
+                },
+                {
+                    "key": "stock_retiro",
+                    "title": "Stock, Carga en Depósito y Horarios",
+                    "icon": "📦",
+                    "regex": re.compile(r'stock|tienen|hay|disponible|disponibilidad|para retirar|queda|retirar hoy|entrega inmediata|conseguir|medida|horario de carga|sucursal', re.IGNORECASE),
+                    "feasibility": "Media (Integración)",
+                    "solution_type": "Consulta de Inventario Spoter",
+                    "solution_action": "Vincular stock mínimo y condiciones de retiro para responder sin consultar al depósito.",
+                    "template_target_id": "hierros_mallas"
+                },
+                {
+                    "key": "acopio_obras",
+                    "title": "Venta Mayorista, Acopio y Grandes Obras",
+                    "icon": "🤝",
+                    "regex": re.compile(r'constructora|obra grande|cuenta corriente|licitacion|licitación|acopio|volumen|distribuidor|arquitecto|presupuesto formal', re.IGNORECASE),
+                    "feasibility": "Consultiva (Humano)",
+                    "solution_type": "Copiloto HITL Spoter",
+                    "solution_action": "Derivación guiada con ficha de intencionalidad comercial y volumen para el asesor comercial.",
+                    "template_target_id": "rescate_corralon"
+                },
+                {
+                    "key": "frustracion_asesor",
+                    "title": "Solicitud de Asesor o Atención Humana",
+                    "icon": "⚠️",
+                    "regex": re.compile(r'no me sirve|no entiendo|otra cosa|no es lo que pregunte|mala atencion|hablar con|asesor|humano|persona|alguien|operador', re.IGNORECASE),
+                    "feasibility": "Alta (Conversacional)",
+                    "solution_type": "IA Conversacional Spoter",
+                    "solution_action": "Eliminar menús rígidos y permitir atención fluida en lenguaje natural.",
+                    "template_target_id": "presupuesto_corralon"
+                }
+            ]
+
+        # Categorías generales para otros rubros
+        return [
+            {
+                "key": "presupuesto_alcance",
+                "title": "Presupuestos, Tarifas y Alcance del Servicio",
+                "icon": "📋",
+                "regex": re.compile(r'precio|cuanto sale|cuánto sale|tarifa|costo|presupuesto|cotizacion|cotización|planes|honorarios|valor|servicio|alcance', re.IGNORECASE),
+                "feasibility": "Alta (Inmediata)",
+                "solution_type": "Base de Conocimiento RAG",
+                "solution_action": "Cargar tarifas base y propuesta comercial en Spoter para responder en 1 bloque estructurado.",
+                "template_target_id": "presupuesto_comercial"
+            },
+            {
+                "key": "pagos_facturacion_gral",
+                "title": "Medios de Pago, Alias y Facturación",
+                "icon": "💳",
+                "regex": re.compile(r'pago|factura|factura a|tarjeta|cuota|transferencia|efectivo|debito|débito|alias|cbu|mercadopago|iva|cuit', re.IGNORECASE),
+                "feasibility": "Alta (Inmediata)",
+                "solution_type": "Atajo Maestro Inmediato",
+                "solution_action": "Configurar atajo de cobro y solicitud de datos fiscales en un solo paso.",
+                "template_target_id": "medios_pago_gral"
+            },
+            {
+                "key": "turnos_agenda",
+                "title": "Turnos, Citas y Coordinación de Agenda",
+                "icon": "📅",
+                "regex": re.compile(r'turno|cita|reunion|reunión|agenda|horario|cuando nos vemos|coordinar|entrevista|visita', re.IGNORECASE),
+                "feasibility": "Alta (Inmediata)",
+                "solution_type": "Agenda Digital Spoter",
+                "solution_action": "Conectar link de calendario o capturar día y rango horario preferido en 1 solo mensaje.",
+                "template_target_id": "triaje_soporte_gral"
+            },
+            {
+                "key": "requisitos_documentacion",
+                "title": "Requisitos Previos y Envío de Documentación",
+                "icon": "📝",
+                "regex": re.compile(r'requisito|requisitos|documentacion|documentación|papeles|dni|constancia|formulario|que necesito|qué necesito|adjunto', re.IGNORECASE),
+                "feasibility": "Alta (Inmediata)",
+                "solution_type": "Checklist Previo Automatizado",
+                "solution_action": "Detallar los requisitos y solicitar la documentación en 1 solo envío sin idas y vueltas.",
+                "template_target_id": "triaje_soporte_gral"
+            },
+            {
+                "key": "seguimiento_estado",
+                "title": "Seguimiento y Estado de Gestión",
+                "icon": "🔄",
+                "regex": re.compile(r'estado|como va|cómo va|novedades|cuando esta|cuándo está|demora|finalizado|listo|seguimiento', re.IGNORECASE),
+                "feasibility": "Media (Integración)",
+                "solution_type": "Notificaciones de Estado Spoter",
+                "solution_action": "Informar estado actual de la gestión e inyectar oxígeno conversacional para evitar la repregunta.",
+                "template_target_id": "cierre_fcr_gral"
+            },
+            {
+                "key": "frustracion_asesor",
+                "title": "Solicitud de Asesor Personalizado",
+                "icon": "⚠️",
+                "regex": re.compile(r'asesor|operador|humano|persona|alguien|ayuda|no entiendo|otra cosa|hablar con', re.IGNORECASE),
+                "feasibility": "Alta (Conversacional)",
+                "solution_type": "IA Conversacional Spoter",
+                "solution_action": "Atención fluida sin fricción de menús numéricos rígidos.",
+                "template_target_id": "rescate_comercial_gral"
+            }
+        ]
+
+    def _compute_handoff_gap_analysis(self, client_conversations, operator_counts, rubro_key='construccion_corralon'):
         is_bot_re = re.compile(r'bot|sistema|auto|automatiz', re.IGNORECASE)
         human_req_re = re.compile(r'\b(asesor|operador|humano|persona|alguien|ayuda|atenci[oó]n|hablar con|no me entend|pasame|comunicarme)\b', re.IGNORECASE)
 
-        categories_def = [
-            {
-                "key": "precios_catalogo",
-                "title": "Cotizaciones y Precios de Catálogo Básico",
-                "icon": "📋",
-                "regex": re.compile(r'precio|cuanto sale|cuánto sale|cuanto esta|cuánto está|lista|catalogo|catálogo|valor|cotizacion|cotización|presupuesto|costo|cotizame|bolsa|cemento|hierro|chapa|ladrillo|metro|arena|presupuest', re.IGNORECASE),
-                "feasibility": "Alta (Inmediata)",
-                "solution_type": "Base de Conocimiento RAG",
-                "solution_action": "Sincronizar lista de precios o catálogo PDF en Spoter para cotizaciones instantáneas en un solo bloque estructurado.",
-                "template_target_id": "tplCeroVueltas1"
-            },
-            {
-                "key": "pagos_facturacion",
-                "title": "Pagos, Alias, CBU y Facturación A / B",
-                "icon": "💳",
-                "regex": re.compile(r'pago|factura|factura a|tarjeta|cuota|transferencia|efectivo|debito|débito|mercadopago|alias|cbu|iva|afip|fiscal|descuento efectivo|forma de pago|medios de pago', re.IGNORECASE),
-                "feasibility": "Alta (Inmediata)",
-                "solution_type": "Atajo Maestro Inmediato",
-                "solution_action": "Configurar atajo de medios de pago y recolección automática de CUIT/Razón Social en mensaje cero.",
-                "template_target_id": "tplCeroVueltas3"
-            },
-            {
-                "key": "envios_logistica",
-                "title": "Envíos, Fletes y Zonas de Reparto",
-                "icon": "🚚",
-                "regex": re.compile(r'envio|envío|flete|despacho|entrega|zona|domicilio|llegan a|pilar|lujan|luján|capital|costo de envio|cuanto sale el envio|flete a|traer|camion|camión|reparto', re.IGNORECASE),
-                "feasibility": "Alta (Inmediata)",
-                "solution_type": "Matriz de Zonas Spoter",
-                "solution_action": "Cargar radios de entrega, tarifas de flete por zona y requisitos de descarga en la Base de Conocimiento.",
-                "template_target_id": "tplCeroVueltas2"
-            },
-            {
-                "key": "stock_disponibilidad",
-                "title": "Stock, Disponibilidad y Retiro en Sucursal",
-                "icon": "📦",
-                "regex": re.compile(r'stock|tienen|hay|disponible|disponibilidad|para retirar|queda|retirar hoy|entrega inmediata|conseguir|medida|cambio|cambiar', re.IGNORECASE),
-                "feasibility": "Media (Integración)",
-                "solution_type": "Consulta de Inventario Spoter",
-                "solution_action": "Vincular stock mínimo y condiciones de retiro para responder sin consultar al depósito.",
-                "template_target_id": "tplCeroVueltas4"
-            },
-            {
-                "key": "ubicacion_horarios",
-                "title": "Ubicación, Sucursales y Horarios Comerciales",
-                "icon": "📍",
-                "regex": re.compile(r'horario|abierto|direccion|dirección|donde estan|dónde están|ubicacion|ubicación|sucursal|donde queda|dónde queda|mapa|hasta que hora|sabado abren|sábado', re.IGNORECASE),
-                "feasibility": "Alta (Inmediata)",
-                "solution_type": "Ficha Comercial en Bienvenida",
-                "solution_action": "Incluir enlace directo a Google Maps, horarios de carga y sucursales en el mensaje inicial.",
-                "template_target_id": "tplCeroVueltas5"
-            },
-            {
-                "key": "estado_pedido",
-                "title": "Estado de Pedido y Seguimiento de Despacho",
-                "icon": "🔄",
-                "regex": re.compile(r'mi pedido|cuando llega|cuándo llega|estado|seguimiento|despacharon|comprobante|ya pague|ya pagué|demora el pedido|salio el camion|salio el reparto', re.IGNORECASE),
-                "feasibility": "Media (Integración)",
-                "solution_type": "Seguimiento Automatizado",
-                "solution_action": "Integrar webhook de estado de despacho y confirmación de recepción automática.",
-                "template_target_id": "tplCeroVueltas6"
-            },
-            {
-                "key": "frustracion_menu",
-                "title": "Bypass de Menú Rígido y Solicitud de Operador",
-                "icon": "⚠️",
-                "regex": re.compile(r'no me sirve|no entiendo|otra cosa|no es lo que pregunte|mala atencion|hablar con|asesor|humano|persona|alguien|operador', re.IGNORECASE),
-                "feasibility": "Alta (Conversacional)",
-                "solution_type": "IA Conversacional Spoter",
-                "solution_action": "Eliminar el árbol numérico rígido y permitir lenguaje natural fluido con prompts entrenados.",
-                "template_target_id": "tplCeroVueltas1"
-            },
-            {
-                "key": "venta_consultiva",
-                "title": "Venta Consultiva Mayorista y Grandes Obras",
-                "icon": "🤝",
-                "regex": re.compile(r'constructora|obra grande|cuenta corriente|licitacion|licitación|acopio|volumen|distribuidor|arquitecto|presupuesto formal', re.IGNORECASE),
-                "feasibility": "Consultiva (Humano)",
-                "solution_type": "Copiloto HITL Spoter",
-                "solution_action": "Derivación guiada con ficha de intencionalidad comercial y urgencia pre-cargada para el asesor.",
-                "template_target_id": "tplCeroVueltas7"
-            }
-        ]
+        categories_def = self._get_rubro_gap_categories(rubro_key)
 
         total_human_convs = 0
         category_counts = Counter()
         category_hours = defaultdict(float)
         category_samples = defaultdict(list)
+        category_operator_samples = defaultdict(list)
 
         for cid, msgs in client_conversations.items():
             has_human = False
@@ -2089,15 +2266,9 @@ class ActuenAnalyzer:
 
             if not matched_cat_key:
                 if explicit_req:
-                    matched_cat_key = "frustracion_menu"
-                elif any('. venta' in t.lower() or '. cotiz' in t.lower() for t in menu_texts):
-                    matched_cat_key = "precios_catalogo"
-                elif any('. logistica' in t.lower() or '. envio' in t.lower() for t in menu_texts):
-                    matched_cat_key = "envios_logistica"
-                elif any('. info' in t.lower() for t in menu_texts):
-                    matched_cat_key = "ubicacion_horarios"
+                    matched_cat_key = categories_def[-1]["key"]
                 else:
-                    matched_cat_key = "precios_catalogo"
+                    matched_cat_key = categories_def[0]["key"]
 
             human_msgs_count = sum(1 for m in msgs if m.get('Propio', '').strip().lower() == 'si' and not is_bot_re.search(m.get('Nombre Operador', '')))
             est_hours = (human_msgs_count * 0.75) / 60.0
@@ -2105,13 +2276,30 @@ class ActuenAnalyzer:
             category_counts[matched_cat_key] += 1
             category_hours[matched_cat_key] += est_hours
 
+            # Muestra de mensajes de clientes
             sample_cand = substantive_text if (substantive_text and not substantive_text.startswith('.')) else (free_texts[0] if free_texts else substantive_text)
             if sample_cand and len(sample_cand) < 140 and len(category_samples[matched_cat_key]) < 3:
                 clean_cand = sample_cand.replace('\n', ' ').strip()
                 if clean_cand not in category_samples[matched_cat_key] and len(clean_cand) > 6:
                     category_samples[matched_cat_key].append(clean_cand)
 
-        avoidable_keys = {"precios_catalogo", "pagos_facturacion", "envios_logistica", "stock_disponibilidad", "ubicacion_horarios", "estado_pedido", "frustracion_menu"}
+            # Muestra de lo que responde hoy el operador humano
+            operator_msgs = []
+            for idx in range(first_human_idx, len(msgs)):
+                m = msgs[idx]
+                if m.get('Propio', '').strip().lower() == 'si':
+                    op_name = m.get('Nombre Operador', '').strip()
+                    if not is_bot_re.search(op_name):
+                        t = m.get('Mensaje', '').strip()
+                        if t and t not in ('[AUDIO]', '[IMAGEN]') and len(t) > 6 and not t.lower().startswith('gracias') and not t.lower() == 'ok':
+                            operator_msgs.append(t)
+
+            if operator_msgs and len(category_operator_samples[matched_cat_key]) < 3:
+                clean_op = operator_msgs[0].replace('\n', ' ').strip()
+                if clean_op not in category_operator_samples[matched_cat_key] and len(clean_op) > 6:
+                    category_operator_samples[matched_cat_key].append(clean_op)
+
+        avoidable_keys = {c["key"] for c in categories_def if c["feasibility"] != "Consultiva (Humano)"}
         avoidable_count = sum(category_counts[k] for k in avoidable_keys)
         avoidable_pct = round((avoidable_count / (total_human_convs or 1)) * 100, 1)
         avoidable_hours = sum(category_hours[k] for k in avoidable_keys)
@@ -2133,6 +2321,7 @@ class ActuenAnalyzer:
                     "solution_type": cdef["solution_type"],
                     "solution_action": cdef["solution_action"],
                     "sample_client_phrases": category_samples.get(k, []),
+                    "sample_operator_responses": category_operator_samples.get(k, []),
                     "template_target_id": cdef["template_target_id"]
                 })
 

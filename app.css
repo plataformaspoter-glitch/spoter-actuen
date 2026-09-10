@@ -2648,3 +2648,29 @@ input[type="range"] {
   font-weight: 600;
   color: var(--spoter-pink);
 }
+
+
+/* --- ESTILOS DE PATRÓN DE RESPUESTA DE OPERADOR EN BRECHAS --- */
+.gap-operator-quotes {
+  margin-top: 10px !important;
+  border-left: 3px solid #6366f1 !important;
+  background: rgba(99, 102, 241, 0.05) !important;
+  border-radius: 0 8px 8px 0;
+  padding: 10px 14px !important;
+}
+
+.gap-quotes-label.operator-label {
+  color: #818cf8 !important;
+  font-weight: 600 !important;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gap-quote-pill.operator-pill {
+  background: rgba(99, 102, 241, 0.1) !important;
+  color: #e0e7ff !important;
+  border: 1px solid rgba(99, 102, 241, 0.25) !important;
+  font-style: italic;
+}
