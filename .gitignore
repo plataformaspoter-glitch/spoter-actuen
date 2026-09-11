@@ -12,3 +12,6 @@ __pycache__/
 
 # Uploads temporales del servidor
 actuen_upload_*/
+
+# Fixtures temporales de los tests
+tests/_fixture_*.csv
