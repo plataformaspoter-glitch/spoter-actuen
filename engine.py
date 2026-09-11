@@ -78,6 +78,27 @@ _DATE_FORMATS = (
     '%d-%m-%Y %H:%M:%S', '%m/%d/%Y %H:%M:%S',
 )
 
+_RE_BOT = re.compile(r'bot|sistema|auto|automatiz', re.I)
+
+def es_bot(operador):
+    """True si el mensaje no es atribuible a una persona con nombre.
+
+    Un operador vacío es automatización: así lo trata el conteo de operadores
+    desde siempre. El análisis de brechas, en cambio, pasaba el nombre crudo a
+    la regex, y un string vacío no matchea, así que contaba los menús del bot
+    como intervención humana. En un export real eso infló los 'humanos' un 69%.
+    """
+    nombre = (operador or '').strip()
+    if not nombre:
+        return True
+    return bool(_RE_BOT.search(nombre))
+
+
+def es_mensaje_de_bot(m):
+    """Versión que toma la fila completa."""
+    return es_bot(m.get('Nombre Operador', ''))
+
+
 def parse_datetime(d_str):
     """Parsea una fecha de CSV. Devuelve datetime.min si no reconoce el formato."""
     if not d_str:
@@ -333,8 +354,9 @@ class ActuenAnalyzer:
         }
 
         # 4. Detectar Foco de Negocio (Ventas vs Soporte)
-        sales_terms = [r'\bprecio\b', r'\bcuanto sale\b', r'\bcuánto sale\b', r'\bcotiz', r'\bpresupuesto\b', r'\bcomprar\b', r'\bstock\b', r'\bdisponible\b', r'\bcatálogo\b', r'\bcatalogo\b', r'\bcuota\b', r'\bdescuento\b', r'\bcosto\b', r'\bvalor\b', r'\btarjeta\b', r'\befectivo\b']
-        support_terms = [r'\breclamo\b', r'\bqueja\b', r'\bno funciona\b', r'\bdemora\b', r'\berror\b', r'\bproblema\b', r'\bayuda\b', r'\bgarant[ií]a\b', r'\bdevoluc', r'\bcambio\b', r'\bturno\b', r'\bautoriz', r'\breintegro\b', r'\btrámite\b', r'\bcuando llega\b', r'\bquién me atiende\b']
+        _foco_cfg = CATALOGO['deteccion_foco']
+        sales_terms = _foco_cfg['terminos_ventas']
+        support_terms = _foco_cfg['terminos_soporte']
 
         sales_hits = sum(len(re.findall(p, full_client_corpus)) for p in sales_terms)
         support_hits = sum(len(re.findall(p, full_client_corpus)) for p in support_terms)
@@ -359,9 +381,9 @@ class ActuenAnalyzer:
         if self.forced_focus:
             final_focus = self.forced_focus.lower()
         else:
-            if detected_sales_pct >= 58:
+            if detected_sales_pct >= _foco_cfg['umbral_pct']:
                 final_focus = 'ventas'
-            elif detected_support_pct >= 58:
+            elif detected_support_pct >= _foco_cfg['umbral_pct']:
                 final_focus = 'soporte'
             else:
                 final_focus = rubro_info.get('default_focus', 'ventas')
@@ -582,7 +604,7 @@ class ActuenAnalyzer:
         operator_list = []
 
         for op, count in operator_counts.most_common():
-            is_bot = bool(is_bot_re.search(op))
+            is_bot = es_bot(op)
             if is_bot:
                 bot_msgs_total += count
             else:
@@ -663,6 +685,53 @@ class ActuenAnalyzer:
 
         _evaluables = cierres_activos + cierres_pasivos
         passive_closing_rate = round((cierres_pasivos / (_evaluables or 1)) * 100, 1)
+
+        # Demanda presencial declarada. Se CUENTA lo que el cliente dice sobre el
+        # local (ubicación, horario, retiro, stock, fricción vivida). No se
+        # extrapola nada: el CSV no observa el mostrador, así que cualquier
+        # multiplicador sobre lo presencial sería un supuesto, no una medición.
+        señales_cfg = CATALOGO['señales_presenciales']
+        señales_re = {k: re.compile(v['regex'], re.I) for k, v in señales_cfg.items()}
+        señal_conteo = {k: 0 for k in señales_cfg}
+        señal_citas = {k: [] for k in señales_cfg}
+        convs_presenciales = set()
+
+        for _cid, _msgs in client_conversations.items():
+            _texto = " ".join((m.get('Mensaje') or '') for m in _msgs if not is_propio(m))
+            for _k, _rx in señales_re.items():
+                _m = _rx.search(_texto)
+                if not _m:
+                    continue
+                señal_conteo[_k] += 1
+                convs_presenciales.add(_cid)
+                if len(señal_citas[_k]) < 3:
+                    _i = max(0, _m.start() - 40)
+                    _cita = _texto[_i:_m.end() + 45].replace('\n', ' ').strip()
+                    if len(_cita) > 12:
+                        señal_citas[_k].append(_cita)
+
+        _n_pres = len(convs_presenciales)
+        demanda_presencial = {
+            "conversaciones_con_señal": _n_pres,
+            "porcentaje": round((_n_pres / (unique_clients or 1)) * 100, 1),
+            "señales": [
+                {
+                    "clave": k,
+                    "titulo": señales_cfg[k]['titulo'],
+                    "conversaciones": señal_conteo[k],
+                    "porcentaje": round((señal_conteo[k] / (unique_clients or 1)) * 100, 1),
+                    "citas": señal_citas[k],
+                }
+                for k in señales_cfg
+                if señal_conteo[k] > 0
+            ],
+            "nota_metodologica": (
+                "Estas son conversaciones donde el propio cliente menciona el local: ubicación, "
+                "horario, retiro o una demora que vivió ahí. Es demanda presencial medida en el "
+                "chat, no una estimación de lo que pasa en el mostrador. El chat no observa el "
+                "local, así que el analizador no proyecta nada sobre él."
+            ),
+        }
 
         actuen_scorecard = self._evaluate_actuen_dynamic(
             focus=final_focus,
@@ -764,6 +833,60 @@ class ActuenAnalyzer:
                 "in_conversation": in_conv_stats
             },
             "ping_pong": ping_pong_benchmark,
+            "demanda_presencial": demanda_presencial,
+
+            # Los dos tipos de plata, separados a propósito. Uno es ingreso
+            # futuro que puede no llegar (proyección, acumulada); el otro es
+            # costo que ya se está pagando todos los meses. Sumarlos en una sola
+            # cifra pega más fuerte pero es más fácil de refutar.
+            "impacto_economico": {
+                "bloque_ingreso": {
+                    "titulo": "Ingreso que no se gana",
+                    "naturaleza": "Proyección sobre el ciclo de vida del cliente",
+                    "temporalidad": "acumulado",
+                    "moneda": "USD",
+                    "total": ltv_econ['total_economic_risk_usd'],
+                    "total_ars": ltv_econ['total_economic_risk_ars'],
+                    "componentes": ltv_econ['composicion'],
+                    "supuesto_clave": (
+                        f"Asume que el {int(ltv_econ['conversion_loss_rate'] * 100)}% de los "
+                        f"{ltv_econ['leads_at_risk_count']:,} leads mal atendidos no se recupera. "
+                        f"{ltv_econ['modelo_explicacion']}"
+                    ),
+                },
+                "bloque_costo": {
+                    "titulo": "Costo que ya se está pagando",
+                    "naturaleza": "Gasto operativo real, medido sobre los mensajes del período",
+                    "temporalidad": "mensual",
+                    "moneda": "ARS",
+                    "total": round(total_financial_benefit_ars),
+                    "total_usd": total_financial_benefit_usd,
+                    "componentes": [
+                        {
+                            "concepto": "Horas de asesores en mensajes evitables",
+                            "formula": f"{saved_messages:,} mensajes × {SUPUESTOS['minutos_por_mensaje']} min ÷ 60 × ${hourly_rate_ars:,}/hora",
+                            "detalle": f"{saved_hours} horas al mes que hoy se van en fragmentación y repreguntas",
+                            "monto_ars": round(labor_savings_ars),
+                        },
+                        {
+                            "concepto": "Costo de mensajería",
+                            "formula": f"{saved_messages:,} mensajes × ${msg_cost_ars}",
+                            "detalle": "Mensajes que no harían falta con respuesta en bloque único",
+                            "monto_ars": round(api_savings_ars),
+                        },
+                    ],
+                    "supuesto_clave": (
+                        f"Toma como evitables los mensajes por encima del estándar de "
+                        f"{target_msgs_per_client} por cliente del rubro. No asume que el cliente se pierda: "
+                        "es tiempo de gente que ya se está pagando."
+                    ),
+                },
+                "nota_metodologica": (
+                    "Los dos bloques no se suman en una sola cifra a propósito: el primero es ingreso "
+                    "futuro que puede no llegar y el segundo es costo que ya se paga todos los meses. "
+                    "Mezclarlos da un número más grande y más fácil de discutir."
+                ),
+            },
             "topics": topic_data,
             "operators": operator_list,
             "actuen_scorecard": actuen_scorecard,
@@ -934,10 +1057,26 @@ class ActuenAnalyzer:
                 if ic_score >= 40:
                     leads_rescatables += 1
 
-        conversion_loss_rate = SUPUESTOS['tasa_caida_conversion']
+        # Modelo de pérdida según el tipo de cliente. En un rubro cautivo (obra
+        # social, seguro, instituto, SaaS con contrato) una mala atención no
+        # produce una baja inmediata: hay contrato o ciclo lectivo de por medio.
+        # Ahí se arriesga un ciclo de renovación, no el valor de vida completo, y
+        # el CAC no se desperdicia porque el cliente sigue siendo cliente.
+        tipo_cliente = rubro_info.get('tipo_cliente', 'transaccional')
+        modelo = CATALOGO['modelo_perdida'][tipo_cliente]
+        conversion_loss_rate = rubro_info.get('tasa_caida', SUPUESTOS['tasa_caida_conversion'])
+
+        valor_ciclo_renovacion = round(avg_ticket * freq)
+        if modelo['base'] == 'ciclo_renovacion':
+            base_unitaria = valor_ciclo_renovacion
+            base_etiqueta = f"Ciclo de renovación (${valor_ciclo_renovacion:,} USD/año)"
+        else:
+            base_unitaria = ltv_val
+            base_etiqueta = f"Valor de vida completo (${ltv_val:,} USD)"
+
         immediate_lost_usd = round(leads_at_risk_count * avg_ticket * conversion_loss_rate)
-        ltv_capital_lost_usd = round(leads_at_risk_count * ltv_val * conversion_loss_rate)
-        cac_wasted_usd = round(leads_at_risk_count * cac)
+        ltv_capital_lost_usd = round(leads_at_risk_count * base_unitaria * conversion_loss_rate)
+        cac_wasted_usd = round(leads_at_risk_count * cac) if modelo['incluye_cac'] else 0
         total_economic_risk_usd = ltv_capital_lost_usd + cac_wasted_usd
 
         projected_recovered_usd = round(total_economic_risk_usd * SUPUESTOS['tasa_recuperacion_spoter'])
@@ -969,7 +1108,34 @@ class ActuenAnalyzer:
             "projected_recovered_ltv_usd": projected_recovered_usd,
             "exchange_rate_ars": exchange_rate_ars,
             "total_economic_risk_ars": total_economic_risk_ars,
-            "projected_recovered_ltv_ars": projected_recovered_ars
+            "projected_recovered_ltv_ars": projected_recovered_ars,
+
+            # Cómo se compone el número, para poder mostrarlo y auditarlo.
+            "tipo_cliente": tipo_cliente,
+            "modelo_titulo": modelo['titulo'],
+            "modelo_explicacion": modelo['explicacion'],
+            "conversion_loss_rate": conversion_loss_rate,
+            "valor_ciclo_renovacion_usd": valor_ciclo_renovacion,
+            "base_calculo_usd": base_unitaria,
+            "base_calculo_etiqueta": base_etiqueta,
+            "composicion": [
+                {
+                    "concepto": "Ingreso proyectado que no se gana",
+                    "formula": f"{leads_at_risk_count:,} leads en riesgo × ${base_unitaria:,} × {round(conversion_loss_rate*100)}%",
+                    "detalle": base_etiqueta,
+                    "monto_usd": ltv_capital_lost_usd,
+                },
+                {
+                    "concepto": "Costo de adquisición desperdiciado",
+                    "formula": (f"{leads_at_risk_count:,} leads × ${cac:,} de CAC"
+                                if modelo['incluye_cac']
+                                else "No aplica: el cliente cautivo no se da de baja en el acto"),
+                    "detalle": ("Lo que costó traer a un lead que después se pierde"
+                                if modelo['incluye_cac']
+                                else "El CAC ya está amortizado y el cliente sigue siendo cliente"),
+                    "monto_usd": cac_wasted_usd,
+                },
+            ]
         }
 
         prioritization_audit = {
@@ -1374,13 +1540,57 @@ class ActuenAnalyzer:
         category_samples = defaultdict(list)
         category_operator_samples = defaultdict(list)
 
+        # Un texto que un operador repite en muchas conversaciones es una
+        # plantilla, no su "patrón manual actual". Mostrarla como ejemplo de lo
+        # que escribe una persona confunde automatización con trabajo humano.
+        _umbral_plantilla = CATALOGO['deteccion_cierre']['umbral_difusion_conversaciones']
+        def _firma(t):
+            """Firma que sobrevive a la personalización.
+
+            'Javier. Gracias por contactarnos...' y 'Eric. Gracias por...' son la
+            misma plantilla, pero el texto exacto difiere por el nombre, así que
+            un dedup literal no las agrupa. El final del mensaje sí es idéntico.
+            """
+            n = re.sub(r'\s+', ' ', (t or '').lower()).strip()
+            return n[-60:] if len(n) > 60 else n
+
+        _apar_op = Counter()
+        _apar_firma = Counter()
+        for _cid, _msgs in client_conversations.items():
+            _vistos = set()
+            for _m in _msgs:
+                if is_propio(_m) and not es_mensaje_de_bot(_m):
+                    _t = (_m.get('Mensaje') or '').strip()
+                    if _t:
+                        _vistos.add(_t)
+            for _t in _vistos:
+                _apar_op[_t] += 1
+            for _f in {_firma(t) for t in _vistos}:
+                _apar_firma[_f] += 1
+
+        _firmas_plantilla = {f for f, n in _apar_firma.items() if n >= _umbral_plantilla}
+        plantillas_operador = {t for t, n in _apar_op.items() if n >= _umbral_plantilla}
+
+        def es_plantilla(t):
+            return t in plantillas_operador or _firma(t) in _firmas_plantilla
+
+        # Un "Gracias" o un "Buenas noches" no ilustran nada en el informe.
+        _mf = CATALOGO['muestra_frases']
+        _re_descartar = re.compile(_mf['regex_descartar'], re.I)
+
+        def frase_util(t):
+            t = (t or '').replace('\n', ' ').strip()
+            if not (_mf['min_largo'] <= len(t) <= _mf['max_largo']):
+                return False
+            return not _re_descartar.match(t)
+
         for cid, msgs in client_conversations.items():
             has_human = False
             first_human_idx = -1
             for idx, m in enumerate(msgs):
                 if is_propio(m):
                     op = m.get('Nombre Operador', '').strip() or 'Bot / Sistema'
-                    if not is_bot_re.search(op):
+                    if not es_bot(op):
                         has_human = True
                         first_human_idx = idx
                         break
@@ -1417,18 +1627,20 @@ class ActuenAnalyzer:
                 else:
                     matched_cat_key = categories_def[0]["key"]
 
-            human_msgs_count = sum(1 for m in msgs if is_propio(m) and not is_bot_re.search(m.get('Nombre Operador', '')))
+            human_msgs_count = sum(1 for m in msgs if is_propio(m) and not es_mensaje_de_bot(m))
             est_hours = (human_msgs_count * SUPUESTOS['minutos_por_mensaje']) / 60.0
 
             category_counts[matched_cat_key] += 1
             category_hours[matched_cat_key] += est_hours
 
             # Muestra de mensajes de clientes
-            sample_cand = substantive_text if (substantive_text and not substantive_text.startswith('.')) else (free_texts[0] if free_texts else substantive_text)
-            if sample_cand and len(sample_cand) < 140 and len(category_samples[matched_cat_key]) < 3:
-                clean_cand = sample_cand.replace('\n', ' ').strip()
-                if clean_cand not in category_samples[matched_cat_key] and len(clean_cand) > 6:
-                    category_samples[matched_cat_key].append(clean_cand)
+            # Se prefiere la frase más larga que pase el filtro: es la que muestra
+            # de verdad qué vino a pedir el cliente.
+            candidatas = [t for t in ([substantive_text] + list(free_texts)) if frase_util(t)]
+            if candidatas and len(category_samples[matched_cat_key]) < 3:
+                elegida = max(candidatas, key=len).replace('\n', ' ').strip()
+                if elegida not in category_samples[matched_cat_key]:
+                    category_samples[matched_cat_key].append(elegida)
 
             # Muestra de lo que responde hoy el operador humano
             operator_msgs = []
@@ -1436,14 +1648,14 @@ class ActuenAnalyzer:
                 m = msgs[idx]
                 if is_propio(m):
                     op_name = m.get('Nombre Operador', '').strip()
-                    if not is_bot_re.search(op_name):
+                    if not es_bot(op_name):
                         t = m.get('Mensaje', '').strip()
-                        if t and t not in ('[AUDIO]', '[IMAGEN]') and len(t) > 6 and not t.lower().startswith('gracias') and not t.lower() == 'ok':
+                        if t and not es_plantilla(t) and frase_util(t):
                             operator_msgs.append(t)
 
             if operator_msgs and len(category_operator_samples[matched_cat_key]) < 3:
-                clean_op = operator_msgs[0].replace('\n', ' ').strip()
-                if clean_op not in category_operator_samples[matched_cat_key] and len(clean_op) > 6:
+                clean_op = max(operator_msgs, key=len).replace('\n', ' ').strip()
+                if clean_op not in category_operator_samples[matched_cat_key]:
                     category_operator_samples[matched_cat_key].append(clean_op)
 
         avoidable_keys = {c["key"] for c in categories_def if c["feasibility"] != "Consultiva (Humano)"}
