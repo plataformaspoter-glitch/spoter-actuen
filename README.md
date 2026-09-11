@@ -1,97 +1,197 @@
-# ⚡ Spoter Analizador ACTÚEN+ (Versión 2.6)
-### Plataforma de Auditoría Conversacional, Diagnóstico de Fugas, Matemática del LTV y Triage Quirúrgico (IU/IC) en WhatsApp
+# ⚡ Spoter Analizador ACTÚEN+ (v2.6)
+### Auditoría conversacional de WhatsApp: fricción, fugas, LTV en riesgo y triage IU/IC
 
-Este sistema procesa exportaciones de chats de WhatsApp (en formato CSV), calcula métricas matemáticas de fricción y tiempos de respuesta, evalúa la interacción bajo el **Método ACTÚEN+ V2.0**, detecta automáticamente el **Rubro** (11 industrias) y el **Foco de Negocio** (Ventas vs. Soporte), calibra la **Política de Handoff** (Bot vs. Asesor) y calcula el **Lifetime Value (LTV) en riesgo** (con soporte en USD y ARS), las fugas por **atención por orden de llegada (FIFO)**, las violaciones de la **ventana de 24 hs de WhatsApp (Meta)** y los leads rescatables bajo el motor determinístico **Spoter Lite (HITL)**.
+Procesa exportaciones de chats de WhatsApp en CSV y produce un diagnóstico con
+números: tiempos de respuesta, fragmentación, ping-pong, distribución bot vs.
+asesores, evaluación bajo el **Método ACTÚEN+**, detección automática de rubro
+(11 industrias) y foco de negocio, **Índice de Conversión e Índice de Urgencia**,
+matemática del **LTV en riesgo** y fases del motor **Spoter Lite**.
 
-**🚀 Demo Online en Vivo:** [https://plataformaspoter-glitch.github.io/spoter-actuen/](https://plataformaspoter-glitch.github.io/spoter-actuen/)
-*(Disponible también el Manual de Ventas v2.0 en: [https://plataformaspoter-glitch.github.io/spoter-actuen/manual_ventas.html](https://plataformaspoter-glitch.github.io/spoter-actuen/manual_ventas.html))*
+**🚀 Demo en vivo:** https://plataformaspoter-glitch.github.io/spoter-actuen/
+**📖 Manual de ventas:** https://plataformaspoter-glitch.github.io/spoter-actuen/manual_ventas.html
 
 ---
 
-## 🧭 1. ¿Qué Hace Falta para Correr el Sistema?
+## 🧭 1. Cómo se usa
 
-El sistema fue diseñado con arquitectura **zero-dependency** para ejecutarse de inmediato en cualquier entorno con Python sin instalaciones complejas:
+### Opción A — En el navegador, sin instalar nada
 
-### Requisitos Técnicos:
-* **Python 3.10 o superior** (probado y 100% compatible con Python 3.10, 3.11, 3.12, 3.13 y 3.14).
-* **Sin dependencias externas (`pip` no requerido):** El servidor y el motor corren íntegramente sobre la biblioteca estándar de Python (`http.server`, `csv`, `json`, `re`, `datetime`, `collections`, `urllib.parse`).
-* **Navegador Web Moderno:** Chrome, Brave, Edge, Safari o Firefox con JavaScript habilitado. Las librerías de interfaz (`Chart.js` y `PapaParse`) se cargan automáticamente desde CDNs oficiales.
+Abrí la demo, arrastrá tus CSV y listo. **El análisis completo corre en la
+pestaña**: Semáforo ACTÚEN+, Triage IU/IC, matemática del LTV, Spoter Lite y
+clasificación temática incluidos.
 
-### Comando para Iniciar:
-Abrí una terminal en esta carpeta y ejecutá:
+Las conversaciones **nunca salen del equipo** — no se sube ningún archivo a
+ningún servidor. Es el argumento de privacidad más fuerte del producto y conviene
+decirlo en la demo.
+
+### Opción B — Con el motor Python local
+
+Sirve para procesar lotes desde disco, exportar informes por línea de comandos o
+integrar el motor en otra herramienta. Produce **exactamente los mismos números**
+que el navegador (ver §5).
+
 ```bash
 python3 api_server.py 8080
 ```
 
+En macOS hay un lanzador de doble clic: **`Iniciar Analizador.command`**. Cierra
+un motor viejo que haya quedado en el puerto, limpia el caché de Python y abre el
+navegador recién cuando el servidor responde.
+
+### Requisitos
+
+* **Solo para la opción B:** Python 3.10 o superior. Sin dependencias `pip`: el
+  motor y el servidor usan únicamente biblioteca estándar.
+* **Navegador moderno** con JavaScript. `Chart.js` y `PapaParse` se cargan desde
+  CDN con versión fija.
+
+> ⚠️ **`rubros.json` es obligatorio.** Es la fuente de verdad del catálogo y lo
+> consumen los dos motores. Si falta, la aplicación no arranca y avisa
+> explícitamente. Al desplegar, copiarlo junto a los HTML.
+
 ---
 
-## 🌐 2. Accesos Rápidos y URLs Disponibles
+## 🗂️ 2. `rubros.json`: una sola fuente de verdad
 
-Una vez iniciado el servidor, tenés disponibles las siguientes vistas en tu navegador:
+Todo dato de negocio vive acá, no en el código. Lo leen `engine.py` y `app.js`,
+así que no pueden divergir.
 
-| URL Local | Recurso | Descripción |
-| :--- | :--- | :--- |
-| **`http://localhost:8080/`** o `/index.html` | **Analizador ACTÚEN+ v2.5 (Actual)** | Versión completa con la nueva Pestaña 2 (`💰 LTV & Triage IU/IC`), Simulador de LTV con sliders, comparativa FIFO vs Spoter, Semáforo ACTÚEN+, picos horarios verticales y Wizard de calibración. |
-| **`http://localhost:8080/manual_ventas.html`** | **Manual de Ventas Web v2.0** | Playbook interactivo y responsive con calculadora de LTV en vivo, argumentarios comerciales, guion SPIN con botones de copia en 1 clic y desarme de objeciones. |
-| **`http://localhost:8080/index_v2.4_clasico.html`** o `/clasico` | **Analizador Clásico (Copia de Respaldo)** | Versión anterior clásica con los 5 tabs originales (previo a la incorporación de la pestaña de LTV / IU/IC). |
-| **`http://localhost:8080/api/status`** | **Estado del Backend** | Endpoint JSON de verificación de salud del servidor (`online`, versión y nombre del motor). |
+| Sección | Qué define |
+| :--- | :--- |
+| `rubros` | Los 11 rubros: SLA, modelo de LTV, keywords, categorías, ícono, tipo de cliente |
+| `plantillas` | Respuestas maestras por rubro y foco (22 combinaciones) |
+| `categorias_gap` | Categorías de derivación a humano con su factibilidad de automatización |
+| `supuestos_economicos` | Tipo de cambio, costo hora, costo mensaje, tasas de caída y recuperación |
+| `modelo_perdida` | Cómo se calcula el capital en riesgo según el tipo de cliente |
+| `entrada` | Alias de columnas y valores aceptados para normalizar CSV de otras plataformas |
+| `deteccion_foco`, `deteccion_cierre`, `muestra_frases`, `señales_presenciales` | Umbrales y patrones de las detecciones |
+| `pingpong_por_rubro` | Estándar de idas y vueltas calibrado por industria |
+
+**Para cambiar un ticket, un SLA o el tipo de cambio, se edita `rubros.json`.** No
+hay que tocar el motor. `tools/generar_rubros_json.py` lo re-emite con formato
+consistente, pero el JSON es la autoridad.
 
 ---
 
-## 📁 3. Inventario Completo de Archivos de la Carpeta
+## 📁 3. Inventario de archivos
 
 ```
 Analizador ACTUEN/
-├── engine.py                     # Motor analítico determinístico en Python (ETL, taxonomía, LTV, IU/IC, Lite, reportes)
-├── api_server.py                 # Servidor HTTP y API REST ligera en Python (enrutamiento de apps y endpoints)
-├── index.html                    # Frontend principal v2.5 (Dashboard, Wizard, Pestaña LTV/Triage, Semáforo, Gráficos)
-├── index_v2.4_clasico.html       # Copia de respaldo exacta de la versión v2.4 clásica (5 pestañas originales)
-├── manual_ventas.html            # Aplicación web interactiva del Manual de Ventas Estratégico Spoter v2.0
-├── MANUAL_DE_VENTAS_ACTUEN_SPOTER.md # Playbook comercial estratégico completo en formato Markdown
-├── app.css                       # Sistema de diseño oficial (Variables CSS, paleta Spoter, dark/light mode, responsive)
-├── app.js                        # Lógica del cliente (Reactividad de sliders, modales, gráficos Chart.js, tabs)
-├── sw.js                         # Auto-desinstalador de Service Workers residuales (evita colisiones con otras PWAs en :8080)
-└── README.md                     # Esta documentación técnica y operativa
+├── rubros.json                   # ⭐ Fuente única: rubros, plantillas, supuestos. OBLIGATORIO
+├── engine.py                     # Motor determinístico (ETL, IC/IU, LTV, Lite, Semáforo, informes)
+├── api_server.py                 # Servidor HTTP local. NO se publica: es herramienta de escritorio
+├── index.html                    # Aplicación principal
+├── app.js                        # Motor del navegador + interfaz. Paridad con engine.py
+├── app.css                       # Sistema de diseño (variables, modo claro/oscuro, responsive)
+├── sample_data.json              # Lote de prueba anonimizado para la demo
+├── manual_ventas.html            # Manual de ventas interactivo
+├── MANUAL_DE_VENTAS_ACTUEN_SPOTER.md  # Playbook comercial en Markdown
+├── index_v2.4_clasico.html       # Vista clásica de 5 pestañas (comparte app.js)
+├── Iniciar Analizador.command    # Lanzador de doble clic para macOS
+├── sw.js                         # Desinstala Service Workers residuales de otras PWAs en :8080
+├── README.md                     # Este archivo
+├── tests/
+│   ├── test_engine.py            # 24 tests de regresión (stdlib)
+│   └── fixture_demo.csv          # Fixture anonimizado
+├── tools/
+│   └── generar_rubros_json.py    # Re-emite rubros.json
+└── PLAN.md                       # Estado del trabajo y decisiones tomadas
 ```
 
----
-
-## 🔬 4. Nuevos Módulos y Funcionalidades (V2.5)
-
-### A. La Matemática del LTV y Destrucción de Capital
-Supera la falacia de que una demora solo pierde una venta puntual de hoy:
-$$\text{LTV} = \text{Ticket Promedio} \times \text{Frecuencia Anual} \times \text{Años de Retención}$$
-$$\text{Capital en Riesgo} = \text{Leads Desatendidos en Zona Fría} \times \text{LTV} \times 65\% \text{ (caída de conversión)} + \text{CAC Desperdiciado}$$
-
-* **Catálogo de LTV Calibrado para 11 Rubros:**
-  * Corralones y Construcción: LTV $6,800 USD (Ticket $850 • 4 compras/año • 2 años)
-  * Salud y Medicina Prepaga: LTV $2,940 USD (Cuota $70 • 12 meses • 3.5 años)
-  * Automotor y Concesionarias: LTV $36,000 USD (Vehículo + Services oficiales + Recompra)
-  * Inmobiliarias y Desarrollos: LTV $45,000 USD (Comisiones + Alquileres/Reventas)
-  * Retail y E-Commerce: LTV $450 USD (Ticket $50 • 4.5 compras/año • 2 años)
-  * SaaS y Servicios B2B: LTV $10,080 USD (Abono $280/mes • 3 años)
-
-### B. Triage Quirúrgico: Algoritmos IU / IC (Human-in-the-Loop)
-* **Índice de Conversión (IC, 0–100):** Evalúa objetivamente la temperatura del lead mediante $E$ (Etapa), $I$ (Intención observable por clicks/pedidos), $G$ (Engagement y ritmo), $H$ (Habilitantes/documentos entregados) y $R$ (Reconexión tras silencio), calibrado con análisis semántico MASS.
-* **Índice de Urgencia (IU, 0–100):** Ordena la cola de trabajo del asesor humano según valor estructural/pauta ($A$), tiempo de espera contra SLA ($B$), compromisos horarios ($C$) e intención importada ($D$), con regla de no-inanición.
-* **Cuello de Botella FIFO:** Demuestra cómo atender por orden de llegada demora los leads calientes a **~198 min**, mientras que la cola Spoter los atiende en **2.0 min (-99% de espera)**.
-
-### C. Motor Determinístico Spoter Lite & Meta 24h
-* **Fase de Gracia (< 30% sesión):** No descarta leads nuevos prematuramente.
-* **Fase de Trabajo (30% - 60%):** Alerta caídas de intención y sugiere planes de nutrición.
-* **Fase de Cierre / Último Rescate (60% - 100%):** Aplica una pregunta directa de decisión antes de declarar el silencio.
-* **Auditoría Ventana 24h:** Detecta conversaciones donde la empresa demoró más de un día, requiriendo plantillas pagas de Meta.
-
-### D. Simulador Interactivo de LTV en Tiempo Real
-Permite que el usuario o el cliente deslice controles para modificar:
-1. **Ticket Promedio ($ USD)**
-2. **Frecuencia Anual de Compra**
-3. **Ciclo de Retención (Años)**
-4. **% de Recuperación Spoter (por defecto 75%)**
-Calculando en vivo el LTV unitario, el capital total en riesgo y el retorno de inversión proyectado.
+**No se publican** `api_server.py`, `PLAN.md`, `tools/` ni `tests/`: el repo es
+público y son herramientas locales.
 
 ---
 
-## 📊 5. Exportación de Informes y Atajos
-* **Informe Ejecutivo en Markdown (`📥 Descargar Informe .md`):** Genera un reporte exhaustivo descargable con los 7 capítulos (métricas globales, ahorro económico, ping-pong, semáforo ACTÚEN+, auditoría de priorización IU/IC, matemática del LTV y protocolo Spoter Lite).
-* **Atajos de Respuestas Maestras (`📥 Exportar Atajos JSON`):** Descarga el catálogo de plantillas "Cero Vueltas" listas para importar en WhatsApp Business, ManyChat o plataformas de mensajería.
+## 🔬 4. Qué calcula
+
+### A. Capital en riesgo, con la composición a la vista
+
+Se presenta en **dos bloques separados a propósito**, porque son dos tipos de
+plata distintos:
+
+| Bloque | Naturaleza | Escala |
+| :--- | :--- | :--- |
+| **Ingreso que no se gana** | Proyección sobre el ciclo de vida | Acumulado, USD |
+| **Costo que ya se está pagando** | Horas de asesores y mensajería | Mensual, ARS |
+
+No se suman en una sola cifra: mezclar una proyección probabilística con un costo
+real da un número más grande pero mucho más fácil de refutar. Cada componente
+muestra su fórmula y su supuesto.
+
+### B. Cliente cautivo vs. transaccional
+
+El modelo de pérdida **cambia según el rubro**:
+
+* **Transaccional** (corralón, retail, automotor, inmobiliaria, gastronomía,
+  turismo, servicios): el cliente compara y compra donde le respondan. Se arriesga
+  el valor de vida completo más el CAC desperdiciado.
+* **Cautivo** (salud, seguros, educación, SaaS con contrato): hay contrato,
+  carencias o ciclo lectivo, así que una mala atención **no produce una baja
+  inmediata**. Se arriesga un ciclo de renovación, con una tasa de caída mucho
+  menor y sin CAC desperdiciado — el cliente sigue siendo cliente.
+
+Aplicar el mismo modelo a los dos exagera unos rubros y falsea otros.
+
+### C. Triage IU/IC
+
+* **Índice de Conversión (IC, 0–100):** temperatura del lead a partir de Etapa,
+  Intención observable, Engagement, Habilitantes y Reconexión, **leyendo el texto
+  de los mensajes**.
+* **Índice de Urgencia (IU, 0–100):** ordena la cola del asesor según valor
+  estructural, espera contra SLA, compromisos horarios e intención importada.
+* **Cuello de botella FIFO:** compara la espera real de los leads calientes contra
+  la que tendrían con cola priorizada. El número sale de los datos del cliente, no
+  de un valor de folleto.
+
+### D. Semáforo ACTÚEN+
+
+Los 7 pilares puntúan sobre datos del cliente: A y + con el reparto de carga, C
+con la fragmentación, T con el SLA del rubro, **U con el IC**, **E con las fases
+Spoter Lite** y **N con la tasa de cierres pasivos**.
+
+### E. Demanda presencial
+
+Cuenta las conversaciones donde el cliente menciona el local — ubicación, horario,
+retiro, stock, o una demora que vivió ahí — con citas textuales.
+
+> **Lo que deliberadamente no hace:** estimar qué pasa en el mostrador. El CSV no
+> lo observa, así que cualquier multiplicador sería un supuesto disfrazado de
+> medición. Se muestra demanda presencial medida; el factor de extrapolación, si
+> se usa, lo pone el cliente como supuesto propio.
+
+### F. Normalización de entrada
+
+Acepta exports de otras plataformas: alias de columnas (`message`, `phone`,
+`from_me`, `timestamp`…), valores de dirección en sus variantes (`Si`, `true`,
+`1`, `out`, `saliente`) y fechas en ISO-8601, `dd/mm/aaaa` o epoch.
+
+Un CSV que no se puede interpretar **falla de forma visible**, indicando qué
+columna revisar, en vez de producir un informe vacío pero verosímil.
+
+---
+
+## ✅ 5. Verificación
+
+```bash
+python3 tests/test_engine.py     # 24 tests, solo biblioteca estándar
+```
+
+Cubren normalización de valores y fechas, paridad entre formatos de CSV, error
+visible ante un CSV ininterpretable, que el IC lea de verdad el texto, que los
+pilares se muevan con los datos, y que los mensajes automáticos no se cuenten como
+trabajo humano.
+
+**Paridad entre motores:** el navegador y `engine.py` se verificaron sobre los
+mismos archivos con una comparación campo por campo — 17 bloques, 620 campos, cero
+diferencias. Hoy esa comparación se corre a mano; automatizarla está pendiente.
+
+---
+
+## 📊 6. Exportación
+
+* **Informe ejecutivo en Markdown** con métricas globales, ahorro económico,
+  ping-pong, Semáforo ACTÚEN+, auditoría IU/IC, matemática del LTV y protocolo
+  Spoter Lite.
+* **Atajos de respuestas maestras en JSON**, listos para importar en WhatsApp
+  Business o plataformas de mensajería.
